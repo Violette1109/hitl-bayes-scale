@@ -32,6 +32,7 @@ public class ExperimentConfig : MonoBehaviour
     
     // Pascal v1.4.2 隨機組分配開關
     public Toggle randomAllocationToggle;
+    public Toggle optimizedToggle;
     public Button startBtn;
 
     // ─────────────────────────────────────────────
@@ -57,6 +58,7 @@ public class ExperimentConfig : MonoBehaviour
     private static int    _samplingRounds    = 10;
     private static bool   _warmStart         = false;
     private static bool   _randomAllocation  = false;
+    private static bool   _optimized         = false;
     private static bool   _experimentStarted = false;
     private static string _userId            = ""; 
 
@@ -67,6 +69,7 @@ public class ExperimentConfig : MonoBehaviour
         _samplingRounds    = 10;
         _warmStart         = false;
         _randomAllocation  = false;
+        _optimized         = false;
         _experimentStarted = false;
         _userId            = ""; 
     }
@@ -124,10 +127,15 @@ public class ExperimentConfig : MonoBehaviour
         
         warmStartToggle.onValueChanged.AddListener(val => _warmStart = val);
         randomAllocationToggle.onValueChanged.AddListener(OnRandomAllocationChanged);
+        if (optimizedToggle != null)
+        {
+            optimizedToggle.onValueChanged.AddListener(val => _optimized = val);
+        }
         startBtn.onClick.AddListener(OnStartClicked);
 
         _warmStart = warmStartToggle.isOn;
         _randomAllocation = randomAllocationToggle.isOn;
+        _optimized = optimizedToggle != null && optimizedToggle.isOn;
 
         HighlightScale(scale5Btn);
         HighlightRounds(rounds10Btn);
@@ -312,7 +320,7 @@ public class ExperimentConfig : MonoBehaviour
         boManager.questionnaireScaleForCsv = _likertMax.ToString();
         boManager.questionnaireSamplingRoundsForCsv = _samplingRounds.ToString();
         boManager.questionnaireRandomForCsv = _randomAllocation;
-        boManager.questionnaireOptimisedForCsv = !_randomAllocation;
+        boManager.questionnaireOptimisedForCsv = _optimized;
 
         boManager.totalIterations = _warmStart
             ? boManager.numOptimizationIterations
