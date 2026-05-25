@@ -493,10 +493,10 @@ MonoBehaviour:
   rawSamples: 1024
   mcSamples: 512
   numSamplingIterations: 3
-  numOptimizationIterations: 2
+  numOptimizationIterations: 5
   seed: 3
   enableSamplingEdit: 1
-  warmStart: 0
+  warmStart: 1
   perfectRatingActive: 0
   perfectRatingInInitialRounds: 0
   initialParametersDataPath: ExampleInitDataParameters.csv
@@ -11962,7 +11962,7 @@ MonoBehaviour:
   onValueChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_IsOn: 1
+  m_IsOn: 0
 --- !u!1 &1163136255
 GameObject:
   m_ObjectHideFlags: 0
@@ -17298,7 +17298,7 @@ MonoBehaviour:
   onValueChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_IsOn: 1
+  m_IsOn: 0
 --- !u!1 &1710715508
 GameObject:
   m_ObjectHideFlags: 0
@@ -19747,7 +19747,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Button
+  m_text: START
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
