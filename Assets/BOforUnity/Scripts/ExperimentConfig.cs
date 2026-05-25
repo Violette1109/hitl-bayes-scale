@@ -32,6 +32,7 @@ public class ExperimentConfig : MonoBehaviour
     
     // Pascal v1.4.2 隨機組分配開關
     public Toggle randomAllocationToggle;
+    public Toggle optimizedToggle;
     public Button startBtn;
 
     // ─────────────────────────────────────────────
@@ -60,6 +61,7 @@ public class ExperimentConfig : MonoBehaviour
     private static int    _samplingRounds    = 10;
     private static bool   _warmStart         = false;
     private static bool   _randomAllocation  = false;
+    private static bool   _optimized         = false;
     private static bool   _experimentStarted = false;
     private static string _userId            = ""; // 直接儲存原始輸入
 
@@ -70,6 +72,7 @@ public class ExperimentConfig : MonoBehaviour
         _samplingRounds    = 10;
         _warmStart         = false;
         _randomAllocation  = false;
+        _optimized         = false;
         _experimentStarted = false;
         _userId            = ""; 
     }
@@ -128,13 +131,19 @@ public class ExperimentConfig : MonoBehaviour
             SetRounds(15); 
             HighlightRounds(rounds15Btn); 
         });
+
         
         warmStartToggle.onValueChanged.AddListener(val => _warmStart = val);
         randomAllocationToggle.onValueChanged.AddListener(OnRandomAllocationChanged);
         startBtn.onClick.AddListener(OnStartClicked);
+        if (optimizedToggle != null)
+        {
+            optimizedToggle.onValueChanged.AddListener(val => _optimized = val);
+        }
 
         _warmStart = warmStartToggle.isOn;
         _randomAllocation = randomAllocationToggle.isOn;
+        _optimized = optimizedToggle != null && optimizedToggle.isOn;
 
         HighlightScale(scale5Btn);
         HighlightRounds(rounds10Btn);
@@ -234,14 +243,14 @@ public class ExperimentConfig : MonoBehaviour
         if (!string.IsNullOrEmpty(_userId))
             boManager.userId = _userId;
 
-        // 自動對照組 Condition ID 編碼 (1-5->1, 1-20->2, 1-100->3)
-        if (_likertMax == 5) boManager.conditionId = "1";
-        else if (_likertMax == 20) boManager.conditionId = "2";
-        else if (_likertMax == 100) boManager.conditionId = "3";
+        // 自動對照組 Condition ID 編碼 (1-5->5, 1-20->20, 1-100->100)
+        if (_likertMax == 5) boManager.conditionId = "5";
+        else if (_likertMax == 20) boManager.conditionId = "20";
+        else if (_likertMax == 100) boManager.conditionId = "100";
 
-        // 自動對照組 Group ID 編碼 (10 輪->1, 15 輪->2)
-        if (_samplingRounds == 10) boManager.groupId = "1";
-        else if (_samplingRounds == 15) boManager.groupId = "2";
+        // 自動對照組 Group ID 編碼 (10 輪->10, 15 輪->15)
+        if (_samplingRounds == 10) boManager.groupId = "10";
+        else if (_samplingRounds == 15) boManager.groupId = "15";
 
         UnityEngine.Debug.Log(
             $"[ApplyConfig] UserID={_userId}, ConditionID={boManager.conditionId}, GroupID={boManager.groupId}, RandomAllocation={_randomAllocation}"
@@ -306,7 +315,7 @@ public class ExperimentConfig : MonoBehaviour
         boManager.questionnaireScaleForCsv = _likertMax.ToString();
         boManager.questionnaireSamplingRoundsForCsv = _samplingRounds.ToString();
         boManager.questionnaireRandomForCsv = _randomAllocation;
-        boManager.questionnaireOptimisedForCsv = !_randomAllocation;
+        boManager.questionnaireOptimisedForCsv = _optimized;
 
         boManager.totalIterations = _warmStart
             ? boManager.numOptimizationIterations
