@@ -38,9 +38,6 @@ public class ExperimentConfig : MonoBehaviour
     // Data-Driven References
     // ─────────────────────────────────────────────
     [Header("Dynamic References (Data-Driven)")]
-    [Tooltip("直接拖入受試者評分用的 Slider，不再用名字字串去撈")]
-    public Slider evaluationSlider;
-
     [Tooltip("請輸入妳在 BoManager 裡設定的問卷 Objective Key (例: mental_demand)")]
     public string targetObjectiveKey = "mental_demand";
 
@@ -61,7 +58,7 @@ public class ExperimentConfig : MonoBehaviour
     private static bool   _warmStart         = false;
     private static bool   _randomAllocation  = false;
     private static bool   _experimentStarted = false;
-    private static string _userId            = ""; // 直接儲存原始輸入
+    private static string _userId            = ""; 
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     static void ResetStatics()
@@ -81,7 +78,6 @@ public class ExperimentConfig : MonoBehaviour
     {
         if (!_experimentStarted)
         {
-            // 先顯示 User ID Panel，其餘全隱藏
             userIdPanel.SetActive(true);
             configPanel.SetActive(false);
             boManager.welcomePanel.SetActive(false);
@@ -105,14 +101,11 @@ public class ExperimentConfig : MonoBehaviour
     {
         if (_experimentStarted) return;
 
-        // User ID panel 監聽
         userIdContinueBtn.onClick.AddListener(OnUserIdContinueClicked);
 
-        // 若已有值（場景重載時）先填回去
         if (!string.IsNullOrEmpty(_userId) && userIdInputField != null)
             userIdInputField.text = _userId;
 
-        // Config panel buttons 監聽
         scale5Btn  .onClick.AddListener(() => { SetScale(5);   HighlightScale(scale5Btn);   });
         scale20Btn .onClick.AddListener(() => { SetScale(20);  HighlightScale(scale20Btn);  });
         scale100Btn.onClick.AddListener(() => { SetScale(100); HighlightScale(scale100Btn); });
@@ -140,9 +133,6 @@ public class ExperimentConfig : MonoBehaviour
         HighlightRounds(rounds10Btn);
     }
 
-    // ─────────────────────────────────────────────
-    // User ID Continue 處理（直接讀取字串）
-    // ─────────────────────────────────────────────
     void OnUserIdContinueClicked()
     {
         string trimmed = userIdInputField != null ? userIdInputField.text.Trim() : "";
@@ -153,7 +143,6 @@ public class ExperimentConfig : MonoBehaviour
             return;
         }
 
-        // 🟢 直接使用受試者輸入的原始字串，不再進行任何加密處理
         _userId = trimmed;
         boManager.userId = _userId;
 
@@ -224,70 +213,87 @@ public class ExperimentConfig : MonoBehaviour
     }
 
     // ─────────────────────────────────────────────
-    // ApplyConfig 
-    // ─────────────────────────────────────────────
-    // ─────────────────────────────────────────────
-    // ApplyConfig (完全體：同時支援多個問卷 Slider 與多個 Objective 邊界連動)
+    // ApplyConfig
     // ─────────────────────────────────────────────
     void ApplyConfig()
     {
         if (!string.IsNullOrEmpty(_userId))
             boManager.userId = _userId;
 
-        // 自動對照組 Condition ID 編碼 (1-5->1, 1-20->2, 1-100->3)
-        if (_likertMax == 5) boManager.conditionId = "1";
-        else if (_likertMax == 20) boManager.conditionId = "2";
-        else if (_likertMax == 100) boManager.conditionId = "3";
+        // 自動對照組 Condition ID 編碼
+        if (_likertMax == 5) boManager.conditionId = "5";
+        else if (_likertMax == 20) boManager.conditionId = "20";
+        else if (_likertMax == 100) boManager.conditionId = "100";
 
-        // 自動對照組 Group ID 編碼 (10 輪->1, 15 輪->2)
-        if (_samplingRounds == 10) boManager.groupId = "1";
-        else if (_samplingRounds == 15) boManager.groupId = "2";
+        // 自動對照組 Group ID 編碼
+        if (_samplingRounds == 10) boManager.groupId = "10";
+        else if (_samplingRounds == 15) boManager.groupId = "15";
 
         UnityEngine.Debug.Log(
             $"[ApplyConfig] UserID={_userId}, ConditionID={boManager.conditionId}, GroupID={boManager.groupId}, RandomAllocation={_randomAllocation}"
         );
 
-        // 🟢 【關鍵修改 1】動態撈取問卷中「所有」名為 "SliderBar" 或正在顯示的 Slider 元件
-        // 這樣不論畫面是有 3 個還是 5 個 Slider，全部都會集體被切換刻度！
+        // 動態調整問卷 Slider 上限
         int updatedSlidersCount = 0;
         Slider[] allSliders = Resources.FindObjectsOfTypeAll<Slider>();
-        
         foreach (var s in allSliders)
         {
-            // 檢查是否為問卷中的滑桿（通常名字包含 SliderBar 或 Slider）
             if (s.gameObject.name == "SliderBar" || s.gameObject.activeInHierarchy)
             {
                 s.minValue = 1;
                 s.maxValue = _likertMax;
                 s.wholeNumbers = true;
-                s.value = (_likertMax + 1) / 2; // 預設拉到正中間
+                s.value = (_likertMax + 1) / 2; 
                 updatedSlidersCount++;
             }
         }
-        
-        Debug.Log($"[ExperimentConfig] 已成功動態調整畫面上 {updatedSlidersCount} 個問卷 Slider 的最大值為: {_likertMax}");
 
-        // 🟢 【關鍵修改 2】遍歷 Objectives，同步改寫 aesthetics 與 usability 的後台數據邊界
-        int updatedObjectivesCount = 0;
+        // 遍歷 Objectives，同步改寫問卷後台數據邊界
         foreach (var obj in boManager.objectives)
         {
             if (obj.key == "aesthetics" || obj.key == "usability")
             {
                 obj.value.lowerBound = 1;         
                 obj.value.upperBound = _likertMax;  
-                updatedObjectivesCount++;
-                
-                Debug.Log($"[ExperimentConfig] 已動態更新 Objective '{obj.key}' 的 UpperBound 為: {_likertMax}");
             }
         }
 
-        if (updatedObjectivesCount < 2)
+        // ==========================================================
+        // 🟢 【雙勾勾動態連動】控制 FittsLawTask 內部隨機開關與隨機種子固定開關
+        // ==========================================================
+        MonoBehaviour[] allComponents = FindObjectsOfType<MonoBehaviour>();
+        foreach (var comp in allComponents)
         {
-            Debug.LogWarning($"[ExperimentConfig] 警告：預期更新 2 個問卷目標，但實際上只成功更新了 {updatedObjectivesCount} 個。請檢查 BoManager 裡的 Key 名稱是否完全對齊 'aesthetics' 與 'usability'。");
+            if (comp != null && comp.GetType().Name == "FittsLawTask")
+            {
+                try
+                {
+                    // 1. 控制隨機抽樣主開關 (randomizeDesignParametersOnBegin)
+                    var fieldRandomize = comp.GetType().GetField("randomizeDesignParametersOnBegin", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+                    if (fieldRandomize != null)
+                    {
+                        fieldRandomize.SetValue(comp, _randomAllocation);
+                        Debug.Log($"[ExperimentConfig 連動] 成功將 FittsLawTask 內部的 randomizeDesignParametersOnBegin 設為: {_randomAllocation}");
+                    }
+
+                    // 2. 🟢 控制確定性隨機種子開關 (useDeterministicRandomDesignSeed)
+                    var fieldDeterministic = comp.GetType().GetField("useDeterministicRandomDesignSeed", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+                    if (fieldDeterministic != null)
+                    {
+                        fieldDeterministic.SetValue(comp, _randomAllocation);
+                        Debug.Log($"[ExperimentConfig 連動] 成功將 FittsLawTask 內部的 useDeterministicRandomDesignSeed 設為: {_randomAllocation}");
+                    }
+                }
+                catch (System.Exception ex)
+                {
+                    Debug.LogWarning($"[ExperimentConfig] 連動 FittsLawTask 隨機雙勾勾時發生例外：{ex.Message}");
+                }
+                break; 
+            }
         }
 
         // =========================================
-        // RANDOM ALLOCATION & ITERATIONS (Pascal v1.4.2 邏輯)
+        // RANDOM ALLOCATION & ITERATIONS
         // =========================================
         if (_randomAllocation)
         {
