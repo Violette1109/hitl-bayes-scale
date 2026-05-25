@@ -88,6 +88,10 @@ namespace BOforUnity
         public string initialParametersDataPath;
         public string initialObjectivesDataPath;
         public string warmStartObjectiveFormat = "auto";
+        public string questionnaireScaleForCsv = "-1";
+        public string questionnaireSamplingRoundsForCsv = "-1";
+        public bool questionnaireRandomForCsv = false;
+        public bool questionnaireOptimisedForCsv = true;
 
         public OptimizerBackend optimizerBackend = OptimizerBackend.BoTorch;
 
@@ -1239,6 +1243,17 @@ namespace BOforUnity
 
         public string GroupId => groupId;
 
+        public string ScaleForQuestionnaireCsv => NormalizeQuestionnaireCsvValue(questionnaireScaleForCsv, conditionId);
+
+        public string SamplingRoundsForQuestionnaireCsv =>
+            NormalizeQuestionnaireCsvValue(questionnaireSamplingRoundsForCsv, groupId);
+
+        public bool WarmStartForQuestionnaireCsv => warmStart;
+
+        public bool RandomForQuestionnaireCsv => questionnaireRandomForCsv;
+
+        public bool OptimisedForQuestionnaireCsv => questionnaireOptimisedForCsv;
+
         public void SubmitQuestionnaireObjectiveValue(string headerName, string rawValue, string sourceName)
         {
             if (optimizer == null || !optimizer.HasObjectiveMatch(headerName))
@@ -1451,6 +1466,17 @@ namespace BOforUnity
         private static string NormalizeLogFolderToken(string value)
         {
             return LogDataFolderUtility.NormalizeLogFolderToken(value);
+        }
+
+        private static string NormalizeQuestionnaireCsvValue(string preferredValue, string fallbackValue)
+        {
+            if (!string.IsNullOrWhiteSpace(preferredValue))
+                return preferredValue.Trim();
+
+            if (!string.IsNullOrWhiteSpace(fallbackValue))
+                return fallbackValue.Trim();
+
+            return "-1";
         }
         
         private bool IsPerfectRating()
