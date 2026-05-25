@@ -1240,9 +1240,15 @@ namespace BOforUnity.Examples
 
             EnsureQuestionnairePerformanceCsvItems(manager);
 
+            if (_canvas != null)
+                _canvas.gameObject.SetActive(false);
+
             bool started = manager.StartQuestionnaire();
             if (!started)
             {
+                if (_canvas != null)
+                    _canvas.gameObject.SetActive(true);
+
                 Debug.LogWarning("FittsLawTask: QuestionnaireToolkit questionnaire could not be started. Finalizing without a questionnaire rating.");
                 return false;
             }
