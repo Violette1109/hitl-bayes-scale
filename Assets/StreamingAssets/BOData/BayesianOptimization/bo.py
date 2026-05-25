@@ -275,7 +275,7 @@ def normalize_obj_column(col, lo, hi, minflag):
 
 
 def expected_observation_columns():
-    return ['UserID','ConditionID','GroupID','Timestamp','Iteration','Phase','IsBest'] + objective_names + parameter_names
+    return ['UserID','Scale','SamplingRounds','Timestamp','Iteration','Phase','IsBest'] + objective_names + parameter_names
 
 # -------------------- protocol parsing --------------------
 def parse_param_init(init_val):

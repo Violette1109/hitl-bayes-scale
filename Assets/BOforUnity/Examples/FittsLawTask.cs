@@ -1603,7 +1603,7 @@ namespace BOforUnity.Examples
                 summaryPath,
                 new[]
                 {
-                    "UserID", "ConditionID", "GroupID", "Timestamp", "Iteration", "Phase", "LogType",
+                    "UserID", "Scale", "SamplingRounds", "Timestamp", "Iteration", "Phase", "LogType",
                     "TargetCount", "ConfiguredTrialCount", "CompletedTrials",
                     "CorrectClicks", "WrongClicks", "WrongTargetClicks", "PlayAreaMissClicks", "TotalClicks",
                     "CenterDistanceSampleCount", "TaskCompletionTimeMs", "MeanClickTimeMs",
@@ -1631,7 +1631,7 @@ namespace BOforUnity.Examples
 
             string[] trialHeaders =
             {
-                "UserID", "ConditionID", "GroupID", "Timestamp", "Iteration", "Phase", "LogType",
+                "UserID", "Scale", "SamplingRounds", "Timestamp", "Iteration", "Phase", "LogType",
                 "TrialIndex", "TargetIndex", "TargetX", "TargetY", "ClickX", "ClickY", "ClickTimeMs",
                 "CenterDistancePixels", "WrongClicksBeforeHit", "WrongTargetClicksBeforeHit",
                 "PlayAreaMissClicksBeforeHit", "ButtonSizePixels", "ButtonDistancePixels",

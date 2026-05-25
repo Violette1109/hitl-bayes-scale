@@ -787,7 +787,7 @@ class BoTests(unittest.TestCase):
 
             obs = pathlib.Path(tmp) / "ObservationsPerEvaluation.csv"
             obs.write_text(
-                "UserID;ConditionID;GroupID;Timestamp;Iteration;Phase;IsBest;o0;p0\n"
+                "UserID;Scale;SamplingRounds;Timestamp;Iteration;Phase;IsBest;o0;p0\n"
                 "u;c;g;2026-01-01 00:00:00;1;sampling;FALSE;10.0;1.0\n",
                 encoding="utf-8",
             )

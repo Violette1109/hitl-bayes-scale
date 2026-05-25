@@ -579,8 +579,8 @@ def expected_observation_columns():
     marker_col = "IsBest" if CABOP_MODE == "single" else "IsPareto"
     return [
         "UserID",
-        "ConditionID",
-        "GroupID",
+        "Scale",
+        "SamplingRounds",
         "Timestamp",
         "Iteration",
         "Phase",
@@ -611,8 +611,8 @@ def append_observation_row(iteration, phase, scalarized_value, objective_raw, pa
     marker_col = "IsBest" if CABOP_MODE == "single" else "IsPareto"
     row = {
         "UserID": USER_ID,
-        "ConditionID": CONDITION_ID,
-        "GroupID": GROUP_ID,
+        "Scale": CONDITION_ID,
+        "SamplingRounds": GROUP_ID,
         "Timestamp": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
         "Iteration": int(iteration),
         "Phase": phase,

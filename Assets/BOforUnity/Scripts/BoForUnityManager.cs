@@ -1017,6 +1017,8 @@ namespace BOforUnity
             }
 
             SetColumn("UserID", userId);
+            SetColumn("Scale", conditionId);
+            SetColumn("SamplingRounds", groupId);
             SetColumn("ConditionID", conditionId);
             SetColumn("GroupID", groupId);
             SetColumn("Timestamp", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture));

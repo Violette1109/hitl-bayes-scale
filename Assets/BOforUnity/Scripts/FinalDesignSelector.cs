@@ -316,13 +316,17 @@ namespace BOforUnity.Scripts
             bool hasIsBest = columnIndex.TryGetValue("IsBest", out int isBestIndex);
             bool hasPhase = columnIndex.TryGetValue("Phase", out int phaseIndex);
             bool hasUserId = columnIndex.TryGetValue("UserID", out int userIdIndex);
-            bool hasConditionId = columnIndex.TryGetValue("ConditionID", out int conditionIdIndex);
-            bool hasGroupId = columnIndex.TryGetValue("GroupID", out int groupIdIndex);
+            bool hasConditionId =
+                columnIndex.TryGetValue("Scale", out int conditionIdIndex) ||
+                columnIndex.TryGetValue("ConditionID", out conditionIdIndex);
+            bool hasGroupId =
+                columnIndex.TryGetValue("SamplingRounds", out int groupIdIndex) ||
+                columnIndex.TryGetValue("GroupID", out groupIdIndex);
             if (!hasUserId || !hasConditionId || !hasGroupId)
             {
                 error =
                     "CSV is missing required context columns for final-design selection. " +
-                    "Expected columns: UserID, ConditionID, GroupID.";
+                    "Expected columns: UserID, Scale (or ConditionID), SamplingRounds (or GroupID).";
                 return false;
             }
 
@@ -637,8 +641,12 @@ namespace BOforUnity.Scripts
             }
 
             bool hasUserId = colIdx.TryGetValue("UserID", out int userIdx);
-            bool hasConditionId = colIdx.TryGetValue("ConditionID", out int conditionIdx);
-            bool hasGroupId = colIdx.TryGetValue("GroupID", out int groupIdx);
+            bool hasConditionId =
+                colIdx.TryGetValue("Scale", out int conditionIdx) ||
+                colIdx.TryGetValue("ConditionID", out conditionIdx);
+            bool hasGroupId =
+                colIdx.TryGetValue("SamplingRounds", out int groupIdx) ||
+                colIdx.TryGetValue("GroupID", out groupIdx);
             if (!hasUserId || !hasConditionId || !hasGroupId)
                 return false;
 
