@@ -170,13 +170,13 @@ This asset uses the [QuestionnaireToolkit](https://assetstore.unity.com/packages
 #### 2.3.1 Questionnaire Data Routing (Important)
 
 - Only questionnaire question-item outputs are considered for BO objective updates (via objective-key/header matching).
-- `additionalCsvItems` are written only to the questionnaire results CSV and are **not** forwarded to the BO manager/backend. `QTQuestionnaireManager` automatically adds `UserID`, `ConditionID`, and `GroupID` as additional CSV items so they are visible in the inspector and appear in every questionnaire CSV.
+- `additionalCsvItems` are written only to the questionnaire results CSV and are **not** forwarded to the BO manager/backend. `QTQuestionnaireManager` automatically adds `UserID`, `Scale`, `SamplingRounds`, `WarmStart`, `Random`, and `Optimised` as additional CSV items so they are visible in the inspector and appear in every questionnaire CSV.
 - `User ID`, `Condition ID`, and `Group ID` are not BO objectives. They are logged as context columns in `ObservationsPerEvaluation.csv`.
-- Questionnaire result CSVs always include `UserID`, `ConditionID`, and `GroupID`. `QTQuestionnaireManager` reads them from `BoForUnityManager` when available; scenes without an active BO manager can set the fallback values in *QTQuestionnaireManager* -> *BO Context Logging*.
+- Questionnaire result CSVs always include `UserID`, `Scale`, `SamplingRounds`, `WarmStart`, `Random`, and `Optimised`. `QTQuestionnaireManager` reads them from `BoForUnityManager` when available; scenes without an active BO manager fall back to the existing context values for `Scale`/`SamplingRounds` and default `false` for the boolean flags.
 - Final-design selection uses the full context triad (`User ID`, `Condition ID`, `Group ID`) when filtering candidate observation rows.
 - The bundled `QTQuestionnaireManager` now defaults its `resultsSavePath` to `Assets/StreamingAssets/BOData/LogData/`, and writes results below `LogData/<USER_LOG_ID>/<CONDITION_LOG_ID>/`, so raw QuestionnaireToolkit CSV output stays with the BO logs instead of `persistentDataPath`.
 - In app scenes that use the Fitts law task, `speed` and `accuracy` are added as extra questionnaire CSV columns. They are telemetry columns for analysis consistency; the BO objective values still come from the task script and the subjective questionnaire items.
-- Do not create `UserID`, `ConditionID`, `GroupID`, `speed`, or `accuracy` as normal questionnaire questions. They should be Additional CSV Items only.
+- Do not create `UserID`, `Scale`, `SamplingRounds`, `WarmStart`, `Random`, `Optimised`, `speed`, or `accuracy` as normal questionnaire questions. They should be Additional CSV Items only.
 
 
 ### 2.4 Results of Multi-Objective Bayesian Optimization (Pareto Front)
@@ -318,7 +318,7 @@ When `Set Condition ID From Mode` is enabled, the manager writes these condition
 | `Static` | `static` |
 | `Random` | `random` |
 
-For static and random runs, configure `UserID` and `GroupID` on `FittsLawConditionManager`. The manager mirrors all three IDs into `QTQuestionnaireManager` at runtime, so questionnaire CSVs, app telemetry, and BO logs share the same context columns.
+For static and random runs, configure `UserID` and `GroupID` on `FittsLawConditionManager`. The manager still mirrors the same runtime context into `QTQuestionnaireManager`, so questionnaire CSVs, app telemetry, and BO logs stay aligned even though the questionnaire CSV now labels the exported context columns as `Scale` and `SamplingRounds`.
 
 For static and random conditions, `FittsLawConditionManager` reads the same sampling/optimization iteration counts as the BO setup and runs one additional local `finaldesign` round when `includeFinalDesignRound` is enabled. This keeps the baseline conditions aligned with the adaptive BO condition while keeping the optimizer inactive. For example, with `3` sampling iterations and `2` optimization iterations, static/random run `5 + 1 finaldesign` task rounds.
 
@@ -885,7 +885,7 @@ BO/backend run files are written to:
 Common files:
 * `ObservationsPerEvaluation.csv`: denormalized parameter/objective observations per evaluation.
 * `ExecutionTimes.csv`: optimization-step runtimes.
-* QuestionnaireToolkit raw result CSVs default to *Assets/StreamingAssets/BOData/LogData/&lt;USER_LOG_ID&gt;/&lt;CONDITION_LOG_ID&gt;/* and include `UserID`, `ConditionID`, and `GroupID`.
+* QuestionnaireToolkit raw result CSVs default to *Assets/StreamingAssets/BOData/LogData/&lt;USER_LOG_ID&gt;/&lt;CONDITION_LOG_ID&gt;/* and include `UserID`, `Scale`, `SamplingRounds`, `WarmStart`, `Random`, and `Optimised`.
 * The Fitts law scene additionally writes `FittsLawAppLog.csv` and `FittsLawTrialLog.csv` to the same condition folder. Its questionnaire CSV also includes measured `speed` and `accuracy` columns.
 
 MOBO (`mobo.py`, `m >= 2`):

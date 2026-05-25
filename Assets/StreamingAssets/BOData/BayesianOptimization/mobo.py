@@ -249,7 +249,7 @@ def denormalize_to_original_obj(v_m1p1, lo, hi, smaller_is_better):
     return np.round(lo + (v + 1) * 0.5 * (hi - lo), 3)
 
 def expected_observation_columns():
-    return ['UserID','ConditionID','GroupID','Timestamp','Iteration','Phase','IsPareto'] + objective_names + parameter_names
+    return ['UserID','Scale','SamplingRounds','Timestamp','Iteration','Phase','IsPareto'] + objective_names + parameter_names
 
 def normalize_param_column(col, lo, hi):
     col = np.asarray(col, dtype=np.float64)

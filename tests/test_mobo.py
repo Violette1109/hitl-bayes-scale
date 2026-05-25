@@ -807,7 +807,7 @@ class MoboTests(unittest.TestCase):
             with csv_path.open("w", newline="") as f:
                 w = csv.writer(f, delimiter=";")
                 w.writerow(
-                    ["UserID", "ConditionID", "GroupID", "Timestamp", "Iteration", "Phase", "IsPareto", "o0", "o1", "p0"]
+                    ["UserID", "Scale", "SamplingRounds", "Timestamp", "Iteration", "Phase", "IsPareto", "o0", "o1", "p0"]
                 )
                 w.writerow(["old", "x", "x", "t", 1, "sampling", "OLD_A", 1, 1, 1])
                 w.writerow(["old", "x", "x", "t", 2, "sampling", "OLD_B", 1, 1, 1])

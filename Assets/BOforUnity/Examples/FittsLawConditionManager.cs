@@ -78,6 +78,25 @@ namespace BOforUnity.Examples
                 ? iterationSettingsSource.GroupId
                 : ResolveContextValue(groupId);
 
+        public string ScaleForQuestionnaireCsv =>
+            conditionMode == ConditionMode.AdaptiveBo && iterationSettingsSource != null
+                ? iterationSettingsSource.ScaleForQuestionnaireCsv
+                : ResolveContextValue(GetConfiguredConditionId());
+
+        public string SamplingRoundsForQuestionnaireCsv =>
+            conditionMode == ConditionMode.AdaptiveBo && iterationSettingsSource != null
+                ? iterationSettingsSource.SamplingRoundsForQuestionnaireCsv
+                : ResolveContextValue(groupId);
+
+        public bool WarmStartForQuestionnaireCsv =>
+            conditionMode == ConditionMode.AdaptiveBo &&
+            iterationSettingsSource != null &&
+            iterationSettingsSource.WarmStartForQuestionnaireCsv;
+
+        public bool RandomForQuestionnaireCsv => conditionMode == ConditionMode.Random;
+
+        public bool OptimisedForQuestionnaireCsv => conditionMode == ConditionMode.AdaptiveBo;
+
         private void Awake()
         {
             ResolveReferences();

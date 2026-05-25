@@ -90,7 +90,7 @@ namespace QuestionnaireToolkit.Scripts
         public string exportPath = "..select..";
 
         [Header("BO Context Logging")]
-        [Tooltip("Automatically add UserID, ConditionID, and GroupID through Additional CSV Items.")]
+        [Tooltip("Automatically add UserID, Scale, SamplingRounds, WarmStart, Random, and Optimised through Additional CSV Items.")]
         public bool logBoContextColumns = true;
         [Tooltip("When available, read the context values from BoForUnityManager. If no manager is available, the fallback values below are used.")]
         public bool readBoContextFromManager = true;
@@ -124,6 +124,86 @@ namespace QuestionnaireToolkit.Scripts
             {
                 ResolveBoContextForLogging(out string resolvedUserId, out string resolvedConditionId, out string resolvedGroupId);
                 return resolvedGroupId;
+            }
+        }
+
+        public string BoContextScaleForCsv
+        {
+            get
+            {
+                ResolveQuestionnaireCsvContext(
+                    out string resolvedUserId,
+                    out string resolvedScale,
+                    out string resolvedSamplingRounds,
+                    out bool resolvedWarmStart,
+                    out bool resolvedRandom,
+                    out bool resolvedOptimised
+                );
+                return resolvedScale;
+            }
+        }
+
+        public string BoContextSamplingRoundsForCsv
+        {
+            get
+            {
+                ResolveQuestionnaireCsvContext(
+                    out string resolvedUserId,
+                    out string resolvedScale,
+                    out string resolvedSamplingRounds,
+                    out bool resolvedWarmStart,
+                    out bool resolvedRandom,
+                    out bool resolvedOptimised
+                );
+                return resolvedSamplingRounds;
+            }
+        }
+
+        public string BoContextWarmStartForCsv
+        {
+            get
+            {
+                ResolveQuestionnaireCsvContext(
+                    out string resolvedUserId,
+                    out string resolvedScale,
+                    out string resolvedSamplingRounds,
+                    out bool resolvedWarmStart,
+                    out bool resolvedRandom,
+                    out bool resolvedOptimised
+                );
+                return resolvedWarmStart ? "true" : "false";
+            }
+        }
+
+        public string BoContextRandomForCsv
+        {
+            get
+            {
+                ResolveQuestionnaireCsvContext(
+                    out string resolvedUserId,
+                    out string resolvedScale,
+                    out string resolvedSamplingRounds,
+                    out bool resolvedWarmStart,
+                    out bool resolvedRandom,
+                    out bool resolvedOptimised
+                );
+                return resolvedRandom ? "true" : "false";
+            }
+        }
+
+        public string BoContextOptimisedForCsv
+        {
+            get
+            {
+                ResolveQuestionnaireCsvContext(
+                    out string resolvedUserId,
+                    out string resolvedScale,
+                    out string resolvedSamplingRounds,
+                    out bool resolvedWarmStart,
+                    out bool resolvedRandom,
+                    out bool resolvedOptimised
+                );
+                return resolvedOptimised ? "true" : "false";
             }
         }
 
@@ -1735,6 +1815,35 @@ namespace QuestionnaireToolkit.Scripts
             resolvedUserId = ResolveReservedContextUserId(resolvedUserId);
         }
 
+        private void ResolveQuestionnaireCsvContext(
+            out string resolvedUserId,
+            out string resolvedScale,
+            out string resolvedSamplingRounds,
+            out bool resolvedWarmStart,
+            out bool resolvedRandom,
+            out bool resolvedOptimised)
+        {
+            if (readBoContextFromManager &&
+                TryGetQuestionnaireCsvContextFromManager(
+                    out resolvedUserId,
+                    out resolvedScale,
+                    out resolvedSamplingRounds,
+                    out resolvedWarmStart,
+                    out resolvedRandom,
+                    out resolvedOptimised))
+            {
+                resolvedUserId = ResolveReservedContextUserId(resolvedUserId);
+                return;
+            }
+
+            ResolveBoContextForLogging(out resolvedUserId, out string resolvedConditionId, out string resolvedGroupId);
+            resolvedScale = NormalizeContextValue(resolvedConditionId);
+            resolvedSamplingRounds = NormalizeContextValue(resolvedGroupId);
+            resolvedWarmStart = false;
+            resolvedRandom = false;
+            resolvedOptimised = false;
+        }
+
         private void EnsureBoContextAdditionalCsvItems()
         {
             if (!logBoContextColumns)
@@ -1743,9 +1852,14 @@ namespace QuestionnaireToolkit.Scripts
             if (additionalCsvItems == null)
                 additionalCsvItems = new ReorderableChildList();
 
+            RemoveAdditionalCsvItem("ConditionID", nameof(BoContextConditionIdForCsv));
+            RemoveAdditionalCsvItem("GroupID", nameof(BoContextGroupIdForCsv));
             EnsureAdditionalCsvItem("UserID", gameObject, nameof(QTQuestionnaireManager), nameof(BoContextUserIdForCsv), 0);
-            EnsureAdditionalCsvItem("ConditionID", gameObject, nameof(QTQuestionnaireManager), nameof(BoContextConditionIdForCsv), 1);
-            EnsureAdditionalCsvItem("GroupID", gameObject, nameof(QTQuestionnaireManager), nameof(BoContextGroupIdForCsv), 2);
+            EnsureAdditionalCsvItem("Scale", gameObject, nameof(QTQuestionnaireManager), nameof(BoContextScaleForCsv), 1);
+            EnsureAdditionalCsvItem("SamplingRounds", gameObject, nameof(QTQuestionnaireManager), nameof(BoContextSamplingRoundsForCsv), 2);
+            EnsureAdditionalCsvItem("WarmStart", gameObject, nameof(QTQuestionnaireManager), nameof(BoContextWarmStartForCsv), 3);
+            EnsureAdditionalCsvItem("Random", gameObject, nameof(QTQuestionnaireManager), nameof(BoContextRandomForCsv), 4);
+            EnsureAdditionalCsvItem("Optimised", gameObject, nameof(QTQuestionnaireManager), nameof(BoContextOptimisedForCsv), 5);
         }
 
         public bool EnsureAdditionalCsvItem(
@@ -1837,6 +1951,40 @@ namespace QuestionnaireToolkit.Scripts
 #endif
         }
 
+        private bool RemoveAdditionalCsvItem(string headerName, string memberName)
+        {
+            if (additionalCsvItems == null || additionalCsvItems.Count == 0)
+                return false;
+
+            bool removed = false;
+            for (int i = additionalCsvItems.Count - 1; i >= 0; i--)
+            {
+                AdditionalCsvItem candidate = additionalCsvItems[i];
+                if (candidate == null)
+                    continue;
+
+                bool headerMatches =
+                    !string.IsNullOrWhiteSpace(headerName) &&
+                    string.Equals(candidate.headerName, headerName, StringComparison.OrdinalIgnoreCase);
+                bool memberMatches =
+                    candidate.itemValue != null &&
+                    candidate.itemValue.target == gameObject &&
+                    string.Equals(candidate.itemValue.component ?? string.Empty, nameof(QTQuestionnaireManager), StringComparison.Ordinal) &&
+                    string.Equals(candidate.itemValue.name ?? string.Empty, memberName, StringComparison.Ordinal);
+
+                if (!headerMatches && !memberMatches)
+                    continue;
+
+                additionalCsvItems.RemoveAt(i);
+                removed = true;
+            }
+
+            if (removed)
+                MarkAdditionalCsvItemsDirty();
+
+            return removed;
+        }
+
         private bool TryGetBoContextFromManager(out string resolvedUserId, out string resolvedConditionId, out string resolvedGroupId)
         {
             resolvedUserId = null;
@@ -1854,6 +2002,56 @@ namespace QuestionnaireToolkit.Scripts
 
                 if (behaviour is IQuestionnaireOptimizationBridge candidate &&
                     TryReadContextFromBridge(candidate, out resolvedUserId, out resolvedConditionId, out resolvedGroupId))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private bool TryGetQuestionnaireCsvContextFromManager(
+            out string resolvedUserId,
+            out string resolvedScale,
+            out string resolvedSamplingRounds,
+            out bool resolvedWarmStart,
+            out bool resolvedRandom,
+            out bool resolvedOptimised)
+        {
+            resolvedUserId = null;
+            resolvedScale = null;
+            resolvedSamplingRounds = null;
+            resolvedWarmStart = false;
+            resolvedRandom = false;
+            resolvedOptimised = false;
+
+            IQuestionnaireOptimizationBridge bridge = GetOptimizationBridge();
+            if (TryReadQuestionnaireCsvContextFromBridge(
+                    bridge,
+                    out resolvedUserId,
+                    out resolvedScale,
+                    out resolvedSamplingRounds,
+                    out resolvedWarmStart,
+                    out resolvedRandom,
+                    out resolvedOptimised))
+            {
+                return true;
+            }
+
+            foreach (var behaviour in Resources.FindObjectsOfTypeAll<MonoBehaviour>())
+            {
+                if (!IsActiveSceneBridge(behaviour))
+                    continue;
+
+                if (behaviour is IQuestionnaireOptimizationBridge candidate &&
+                    TryReadQuestionnaireCsvContextFromBridge(
+                        candidate,
+                        out resolvedUserId,
+                        out resolvedScale,
+                        out resolvedSamplingRounds,
+                        out resolvedWarmStart,
+                        out resolvedRandom,
+                        out resolvedOptimised))
                 {
                     return true;
                 }
@@ -1885,6 +2083,33 @@ namespace QuestionnaireToolkit.Scripts
             resolvedUserId = NormalizeContextValue(bridge.UserId);
             resolvedConditionId = NormalizeContextValue(bridge.ConditionId);
             resolvedGroupId = NormalizeContextValue(bridge.GroupId);
+            return true;
+        }
+
+        private static bool TryReadQuestionnaireCsvContextFromBridge(
+            IQuestionnaireOptimizationBridge bridge,
+            out string resolvedUserId,
+            out string resolvedScale,
+            out string resolvedSamplingRounds,
+            out bool resolvedWarmStart,
+            out bool resolvedRandom,
+            out bool resolvedOptimised)
+        {
+            resolvedUserId = null;
+            resolvedScale = null;
+            resolvedSamplingRounds = null;
+            resolvedWarmStart = false;
+            resolvedRandom = false;
+            resolvedOptimised = false;
+            if (bridge == null)
+                return false;
+
+            resolvedUserId = NormalizeContextValue(bridge.UserId);
+            resolvedScale = NormalizeContextValue(bridge.ScaleForQuestionnaireCsv);
+            resolvedSamplingRounds = NormalizeContextValue(bridge.SamplingRoundsForQuestionnaireCsv);
+            resolvedWarmStart = bridge.WarmStartForQuestionnaireCsv;
+            resolvedRandom = bridge.RandomForQuestionnaireCsv;
+            resolvedOptimised = bridge.OptimisedForQuestionnaireCsv;
             return true;
         }
 

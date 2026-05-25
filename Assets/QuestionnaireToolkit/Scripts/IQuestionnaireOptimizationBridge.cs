@@ -8,6 +8,11 @@ namespace QuestionnaireToolkit.Scripts
         string UserId { get; }
         string ConditionId { get; }
         string GroupId { get; }
+        string ScaleForQuestionnaireCsv { get; }
+        string SamplingRoundsForQuestionnaireCsv { get; }
+        bool WarmStartForQuestionnaireCsv { get; }
+        bool RandomForQuestionnaireCsv { get; }
+        bool OptimisedForQuestionnaireCsv { get; }
 
         void OptimizationStart();
         void RequestNextIteration();
