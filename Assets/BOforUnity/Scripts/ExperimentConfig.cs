@@ -130,12 +130,12 @@ public class ExperimentConfig : MonoBehaviour
         if (optimizedToggle != null)
         {
             optimizedToggle.onValueChanged.AddListener(val => _optimized = val);
-            _optimized = optimizedToggle.isOn;
         }
         startBtn.onClick.AddListener(OnStartClicked);
 
         _warmStart = warmStartToggle.isOn;
         _randomAllocation = randomAllocationToggle.isOn;
+        _optimized = optimizedToggle != null && optimizedToggle.isOn;
 
         HighlightScale(scale5Btn);
         HighlightRounds(rounds10Btn);
