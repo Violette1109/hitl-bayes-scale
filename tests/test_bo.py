@@ -727,6 +727,14 @@ class BoTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self._run_main_with_init(bo, init_msg, execute_stub=lambda *args, **kwargs: None)
 
+    def test_main_parses_warm_start_string_false_as_false(self):
+        bo = load_bo_module()
+        init_msg = self._base_init()
+        init_msg["config"]["warmStart"] = "false"
+        init_msg["config"]["numSamplingIterations"] = 0
+        with self.assertRaises(ValueError):
+            self._run_main_with_init(bo, init_msg, execute_stub=lambda *args, **kwargs: None)
+
     def test_main_rejects_non_positive_optimizer_hyperparams(self):
         bo = load_bo_module()
         init_msg = self._base_init()
