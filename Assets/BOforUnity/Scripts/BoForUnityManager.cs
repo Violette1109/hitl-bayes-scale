@@ -169,6 +169,12 @@ namespace BOforUnity
             SyncSamplingIterationDefaults();
             totalIterations = GetConfiguredTotalIterations();
         }
+
+          private void OnDestroy()
+         {
+             if (_instance == this)
+                 _instance = null;
+         }
         
         void Start()
         {
