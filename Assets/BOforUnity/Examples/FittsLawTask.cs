@@ -1590,6 +1590,9 @@ namespace BOforUnity.Examples
             ResolveFittsLogContext(manager, out string userId, out string conditionId, out string groupId);
             string iteration = GetLogIteration(manager);
             string phase = GetLogPhase(manager);
+            string warmStart = manager != null && manager.warmStart ? "true" : "false";
+            string random = manager != null && manager.questionnaireRandomForCsv ? "true" : "false";
+            string optimizedIntroduction = manager != null && manager.questionnaireOptimisedForCsv ? "true" : "false";
 
             string summaryPath = Path.Combine(logRoot, GetCsvFileName(appSummaryLogFileName, "FittsLawAppLog.csv"));
             string trialPath = Path.Combine(logRoot, GetCsvFileName(appTrialLogFileName, "FittsLawTrialLog.csv"));
@@ -1603,7 +1606,8 @@ namespace BOforUnity.Examples
                 summaryPath,
                 new[]
                 {
-                    "UserID", "Scale", "SamplingRounds", "Timestamp", "Iteration", "Phase", "LogType",
+                    "UserID", "Scale", "SamplingRounds", "WarmStart", "Random", "OptimizedIntroduction",
+                    "Timestamp", "Iteration", "Phase", "LogType",
                     "TargetCount", "ConfiguredTrialCount", "CompletedTrials",
                     "CorrectClicks", "WrongClicks", "WrongTargetClicks", "PlayAreaMissClicks", "TotalClicks",
                     "CenterDistanceSampleCount", "TaskCompletionTimeMs", "MeanClickTimeMs",
@@ -1614,7 +1618,7 @@ namespace BOforUnity.Examples
                 },
                 new[]
                 {
-                    userId, conditionId, groupId, timestamp, iteration, phase, "summary",
+                    userId, conditionId, groupId, warmStart, random, optimizedIntroduction, timestamp, iteration, phase, "summary",
                     FormatInt(targetCount), FormatInt(trialCount), FormatInt(trialResults.Count),
                     FormatInt(_correctClicks), FormatInt(_wrongClicksTotal), FormatInt(_wrongTargetClicksTotal),
                     FormatInt(_playAreaMissClicksTotal), FormatInt(totalClicks),
@@ -1631,7 +1635,8 @@ namespace BOforUnity.Examples
 
             string[] trialHeaders =
             {
-                "UserID", "Scale", "SamplingRounds", "Timestamp", "Iteration", "Phase", "LogType",
+                "UserID", "Scale", "SamplingRounds", "WarmStart", "Random", "OptimizedIntroduction",
+                "Timestamp", "Iteration", "Phase", "LogType",
                 "TrialIndex", "TargetIndex", "TargetX", "TargetY", "ClickX", "ClickY", "ClickTimeMs",
                 "CenterDistancePixels", "WrongClicksBeforeHit", "WrongTargetClicksBeforeHit",
                 "PlayAreaMissClicksBeforeHit", "ButtonSizePixels", "ButtonDistancePixels",
@@ -1647,7 +1652,7 @@ namespace BOforUnity.Examples
                     trialHeaders,
                     new[]
                     {
-                        userId, conditionId, groupId, timestamp, iteration, phase, "trial",
+                        userId, conditionId, groupId, warmStart, random, optimizedIntroduction, timestamp, iteration, phase, "trial",
                         FormatInt(result.trialIndex), FormatInt(result.targetIndex),
                         FormatCsvFloat(result.targetPosition.x), FormatCsvFloat(result.targetPosition.y),
                         FormatCsvFloat(result.clickPosition.x), FormatCsvFloat(result.clickPosition.y),

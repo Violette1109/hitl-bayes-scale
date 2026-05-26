@@ -32,6 +32,8 @@ namespace BOforUnity.Scripts
         public int batchSize, numRestarts, rawSamples, numOptimizationIterations, mcSamples, numSamplingIterations, seed;
         public int nParameters, nObjectives;
         public bool warmStart;
+        public bool random;
+        public bool optimizedIntroduction;
         public string initialParametersDataPath, initialObjectivesDataPath, warmStartObjectiveFormat;
         public string optimizerBackend, cabopObjectiveMode, cabopUpdateRule;
         public bool cabopUseCostAwareAcquisition, cabopEnableCostBudget;
@@ -642,6 +644,8 @@ namespace BOforUnity.Scripts
                     nParameters = parameterPayload.Count,
                     nObjectives = objectivePayload.Count,
                     warmStart = _bomanager.warmStart,
+                    random = _bomanager.questionnaireRandomForCsv,
+                    optimizedIntroduction = _bomanager.questionnaireOptimisedForCsv,
                     initialParametersDataPath = _bomanager.initialParametersDataPath,
                     initialObjectivesDataPath = _bomanager.initialObjectivesDataPath,
                     warmStartObjectiveFormat = NormalizeWarmStartObjectiveFormat(_bomanager.warmStartObjectiveFormat),

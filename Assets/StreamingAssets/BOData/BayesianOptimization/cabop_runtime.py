@@ -20,6 +20,8 @@ PROBLEM_DIM = None
 NUM_OBJS = None
 
 WARM_START = False
+RANDOM_ALLOCATION = False
+OPTIMIZED_INTRODUCTION = True
 CSV_PATH_PARAMETERS = ""
 CSV_PATH_OBJECTIVES = ""
 WARM_START_OBJECTIVE_FORMAT = "auto"  # auto|raw|normalized_max|normalized_native
@@ -599,11 +601,18 @@ def expected_observation_columns():
         "UserID",
         "Scale",
         "SamplingRounds",
+        "WarmStart",
+        "Random",
+        "OptimizedIntroduction",
         "Timestamp",
         "Iteration",
         "Phase",
         marker_col,
     ] + objective_names + parameter_names
+
+
+def bool_to_csv(value):
+    return "true" if bool(value) else "false"
 
 
 def create_observations_file_if_missing(path):
@@ -631,6 +640,9 @@ def append_observation_row(iteration, phase, scalarized_value, objective_raw, pa
         "UserID": USER_ID,
         "Scale": CONDITION_ID,
         "SamplingRounds": GROUP_ID,
+        "WarmStart": bool_to_csv(WARM_START),
+        "Random": bool_to_csv(RANDOM_ALLOCATION),
+        "OptimizedIntroduction": bool_to_csv(OPTIMIZED_INTRODUCTION),
         "Timestamp": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
         "Iteration": int(iteration),
         "Phase": phase,
@@ -847,7 +859,7 @@ def run_cabop(conn):
 
 def parse_init_and_validate(init_msg, forced_mode):
     global N_INITIAL, N_ITERATIONS, SEED, PROBLEM_DIM, NUM_OBJS
-    global WARM_START, CSV_PATH_PARAMETERS, CSV_PATH_OBJECTIVES, WARM_START_OBJECTIVE_FORMAT
+    global WARM_START, RANDOM_ALLOCATION, OPTIMIZED_INTRODUCTION, CSV_PATH_PARAMETERS, CSV_PATH_OBJECTIVES, WARM_START_OBJECTIVE_FORMAT
     global USER_ID, CONDITION_ID, GROUP_ID, USER_LOG_ID, CONDITION_LOG_ID
     global OPTIMIZER_BACKEND, CABOP_MODE, CABOP_USE_COST_AWARE
     global CABOP_UPDATE_RULE, CABOP_ENABLE_COST_BUDGET, CABOP_MAX_CUMULATIVE_COST
@@ -861,6 +873,8 @@ def parse_init_and_validate(init_msg, forced_mode):
     NUM_OBJS = get_cfg_int(cfg, "nObjectives", required=True)
 
     WARM_START = get_cfg_bool(cfg, "warmStart", default=False)
+    RANDOM_ALLOCATION = get_cfg_bool(cfg, "random", default=False)
+    OPTIMIZED_INTRODUCTION = get_cfg_bool(cfg, "optimizedIntroduction", default=True)
     CSV_PATH_PARAMETERS = str(cfg.get("initialParametersDataPath") or "")
     CSV_PATH_OBJECTIVES = str(cfg.get("initialObjectivesDataPath") or "")
     WARM_START_OBJECTIVE_FORMAT = str(cfg.get("warmStartObjectiveFormat", "auto") or "auto").strip().lower()

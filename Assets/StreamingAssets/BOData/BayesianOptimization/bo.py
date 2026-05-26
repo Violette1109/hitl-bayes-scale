@@ -42,6 +42,8 @@ OBSERVATIONS_LOG_PATH = ""
 
 # warm start placeholders
 WARM_START = False
+RANDOM_ALLOCATION = False
+OPTIMIZED_INTRODUCTION = True
 CSV_PATH_PARAMETERS = ""
 CSV_PATH_OBJECTIVES = ""
 WARM_START_OBJECTIVE_FORMAT = "auto"  # auto|raw|normalized_max|normalized_native
@@ -275,7 +277,11 @@ def normalize_obj_column(col, lo, hi, minflag):
 
 
 def expected_observation_columns():
-    return ['UserID','Scale','SamplingRounds','Timestamp','Iteration','Phase','IsBest'] + objective_names + parameter_names
+    return ['UserID','Scale','SamplingRounds','WarmStart','Random','OptimizedIntroduction','Timestamp','Iteration','Phase','IsBest'] + objective_names + parameter_names
+
+
+def bool_to_csv(value):
+    return "true" if bool(value) else "false"
 
 # -------------------- protocol parsing --------------------
 def parse_param_init(init_val):
@@ -419,7 +425,7 @@ def generate_initial_data(conn, n_samples):
         if is_best:
             best_so_far = float(y_np[0])
 
-        row = [USER_ID, CONDITION_ID, GROUP_ID,
+        row = [USER_ID, CONDITION_ID, GROUP_ID, bool_to_csv(WARM_START), bool_to_csv(RANDOM_ALLOCATION), bool_to_csv(OPTIMIZED_INTRODUCTION),
                time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
                i+1, 'sampling', 'TRUE' if is_best else 'FALSE', y_den, *x_den]
         with open(obs_csv, 'a', newline='') as f:
@@ -543,7 +549,7 @@ def save_xy(x_sample, y_sample, iteration):
         cols = expected_observation_columns()
         df = pd.DataFrame(columns=cols)
 
-    new_row = pd.DataFrame([[USER_ID, CONDITION_ID, GROUP_ID,
+    new_row = pd.DataFrame([[USER_ID, CONDITION_ID, GROUP_ID, bool_to_csv(WARM_START), bool_to_csv(RANDOM_ALLOCATION), bool_to_csv(OPTIMIZED_INTRODUCTION),
                              time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
                              iteration_index, 'optimization', 'FALSE',
                              y_np[-1][0], *x_np[-1]]], columns=df.columns)
@@ -644,7 +650,7 @@ def bo_execute(conn, seed, iterations, initial_samples):
 def main():
     global N_INITIAL, N_ITERATIONS, BATCH_SIZE, NUM_RESTARTS, RAW_SAMPLES, MC_SAMPLES, SEED
     global PROBLEM_DIM, NUM_OBJS, problem_bounds
-    global WARM_START, CSV_PATH_PARAMETERS, CSV_PATH_OBJECTIVES, WARM_START_OBJECTIVE_FORMAT
+    global WARM_START, RANDOM_ALLOCATION, OPTIMIZED_INTRODUCTION, CSV_PATH_PARAMETERS, CSV_PATH_OBJECTIVES, WARM_START_OBJECTIVE_FORMAT
     global USER_ID, CONDITION_ID, GROUP_ID, USER_LOG_ID, CONDITION_LOG_ID
     global parameter_names, objective_names, parameters_info, objectives_info
     global SOCKET_ACCEPT_TIMEOUT_SEC
@@ -696,6 +702,8 @@ def main():
         PROBLEM_DIM    = get_cfg_int(cfg, "nParameters", required=True)
         NUM_OBJS       = get_cfg_int(cfg, "nObjectives", required=True)
         WARM_START     = get_cfg_bool(cfg, "warmStart", default=False)
+        RANDOM_ALLOCATION = get_cfg_bool(cfg, "random", default=False)
+        OPTIMIZED_INTRODUCTION = get_cfg_bool(cfg, "optimizedIntroduction", default=True)
         CSV_PATH_PARAMETERS = str(cfg.get("initialParametersDataPath") or "")
         CSV_PATH_OBJECTIVES = str(cfg.get("initialObjectivesDataPath") or "")
         WARM_START_OBJECTIVE_FORMAT = str(

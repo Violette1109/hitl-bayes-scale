@@ -1019,6 +1019,9 @@ namespace BOforUnity
             SetColumn("UserID", userId);
             SetColumn("Scale", conditionId);
             SetColumn("SamplingRounds", groupId);
+            SetColumn("WarmStart", warmStart ? "true" : "false");
+            SetColumn("Random", questionnaireRandomForCsv ? "true" : "false");
+            SetColumn("OptimizedIntroduction", questionnaireOptimisedForCsv ? "true" : "false");
             SetColumn("ConditionID", conditionId);
             SetColumn("GroupID", groupId);
             SetColumn("Timestamp", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture));
