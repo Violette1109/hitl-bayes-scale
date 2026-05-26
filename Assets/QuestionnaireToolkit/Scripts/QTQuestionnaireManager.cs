@@ -90,7 +90,7 @@ namespace QuestionnaireToolkit.Scripts
         public string exportPath = "..select..";
 
         [Header("BO Context Logging")]
-        [Tooltip("Automatically add UserID, Scale, SamplingRounds, WarmStart, Random, and Optimised through Additional CSV Items.")]
+        [Tooltip("Automatically add UserID, Scale, SamplingRounds, WarmStart, Random, and OptimizedIntroduction through Additional CSV Items.")]
         public bool logBoContextColumns = true;
         [Tooltip("When available, read the context values from BoForUnityManager. If no manager is available, the fallback values below are used.")]
         public bool readBoContextFromManager = true;
@@ -1860,7 +1860,7 @@ namespace QuestionnaireToolkit.Scripts
             EnsureAdditionalCsvItem("SamplingRounds", gameObject, nameof(QTQuestionnaireManager), nameof(BoContextSamplingRoundsForCsv), 2);
             EnsureAdditionalCsvItem("WarmStart", gameObject, nameof(QTQuestionnaireManager), nameof(BoContextWarmStartForCsv), 3);
             EnsureAdditionalCsvItem("Random", gameObject, nameof(QTQuestionnaireManager), nameof(BoContextRandomForCsv), 4);
-            EnsureAdditionalCsvItem("Optimised", gameObject, nameof(QTQuestionnaireManager), nameof(BoContextOptimisedForCsv), 5);
+            EnsureAdditionalCsvItem("OptimizedIntroduction", gameObject, nameof(QTQuestionnaireManager), nameof(BoContextOptimisedForCsv), 5);
         }
 
         public bool EnsureAdditionalCsvItem(

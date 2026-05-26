@@ -170,13 +170,13 @@ This asset uses the [QuestionnaireToolkit](https://assetstore.unity.com/packages
 #### 2.3.1 Questionnaire Data Routing (Important)
 
 - Only questionnaire question-item outputs are considered for BO objective updates (via objective-key/header matching).
-- `additionalCsvItems` are written only to the questionnaire results CSV and are **not** forwarded to the BO manager/backend. `QTQuestionnaireManager` automatically adds `UserID`, `Scale`, `SamplingRounds`, `WarmStart`, `Random`, and `Optimised` as additional CSV items so they are visible in the inspector and appear in every questionnaire CSV.
+- `additionalCsvItems` are written only to the questionnaire results CSV and are **not** forwarded to the BO manager/backend. `QTQuestionnaireManager` automatically adds `UserID`, `Scale`, `SamplingRounds`, `WarmStart`, `Random`, and `OptimizedIntroduction` as additional CSV items so they are visible in the inspector and appear in every questionnaire CSV.
 - `User ID`, `Condition ID`, and `Group ID` are not BO objectives. They are logged as context columns in `ObservationsPerEvaluation.csv`.
-- Questionnaire result CSVs always include `UserID`, `Scale`, `SamplingRounds`, `WarmStart`, `Random`, and `Optimised`. `QTQuestionnaireManager` reads them from `BoForUnityManager` when available; scenes without an active BO manager fall back to the existing context values for `Scale`/`SamplingRounds` and default `false` for the boolean flags.
+- Questionnaire result CSVs always include `UserID`, `Scale`, `SamplingRounds`, `WarmStart`, `Random`, and `OptimizedIntroduction`. `QTQuestionnaireManager` reads them from `BoForUnityManager` when available; scenes without an active BO manager fall back to the existing context values for `Scale`/`SamplingRounds` and default `false` for the boolean flags.
 - Final-design selection uses the full context triad (`User ID`, `Condition ID`, `Group ID`) when filtering candidate observation rows.
 - The bundled `QTQuestionnaireManager` now defaults its `resultsSavePath` to `Assets/StreamingAssets/BOData/LogData/`, and writes results below `LogData/<USER_LOG_ID>/<CONDITION_LOG_ID>/`, so raw QuestionnaireToolkit CSV output stays with the BO logs instead of `persistentDataPath`.
 - In app scenes that use the Fitts law task, `speed` and `accuracy` are added as extra questionnaire CSV columns. They are telemetry columns for analysis consistency; the BO objective values still come from the task script and the subjective questionnaire items.
-- Do not create `UserID`, `Scale`, `SamplingRounds`, `WarmStart`, `Random`, `Optimised`, `speed`, or `accuracy` as normal questionnaire questions. They should be Additional CSV Items only.
+- Do not create `UserID`, `Scale`, `SamplingRounds`, `WarmStart`, `Random`, `OptimizedIntroduction`, `speed`, or `accuracy` as normal questionnaire questions. They should be Additional CSV Items only.
 
 
 ### 2.4 Results of Multi-Objective Bayesian Optimization (Pareto Front)
@@ -885,7 +885,7 @@ BO/backend run files are written to:
 Common files:
 * `ObservationsPerEvaluation.csv`: denormalized parameter/objective observations per evaluation.
 * `ExecutionTimes.csv`: optimization-step runtimes.
-* QuestionnaireToolkit raw result CSVs default to *Assets/StreamingAssets/BOData/LogData/&lt;USER_LOG_ID&gt;/&lt;CONDITION_LOG_ID&gt;/* and include `UserID`, `Scale`, `SamplingRounds`, `WarmStart`, `Random`, and `Optimised`.
+* QuestionnaireToolkit raw result CSVs default to *Assets/StreamingAssets/BOData/LogData/&lt;USER_LOG_ID&gt;/&lt;CONDITION_LOG_ID&gt;/* and include `UserID`, `Scale`, `SamplingRounds`, `WarmStart`, `Random`, and `OptimizedIntroduction`.
 * The Fitts law scene additionally writes `FittsLawAppLog.csv` and `FittsLawTrialLog.csv` to the same condition folder. Its questionnaire CSV also includes measured `speed` and `accuracy` columns.
 
 MOBO (`mobo.py`, `m >= 2`):
