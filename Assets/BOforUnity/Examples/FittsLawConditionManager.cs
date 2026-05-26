@@ -93,9 +93,15 @@ namespace BOforUnity.Examples
             iterationSettingsSource != null &&
             iterationSettingsSource.WarmStartForQuestionnaireCsv;
 
-        public bool RandomForQuestionnaireCsv => conditionMode == ConditionMode.Random;
+        public bool RandomForQuestionnaireCsv =>
+            iterationSettingsSource != null
+                ? iterationSettingsSource.RandomForQuestionnaireCsv
+                : conditionMode == ConditionMode.Random;
 
-        public bool OptimisedForQuestionnaireCsv => conditionMode == ConditionMode.AdaptiveBo;
+        public bool OptimisedForQuestionnaireCsv =>
+            iterationSettingsSource != null
+                ? iterationSettingsSource.OptimisedForQuestionnaireCsv
+                : conditionMode == ConditionMode.AdaptiveBo;
 
         private void Awake()
         {
