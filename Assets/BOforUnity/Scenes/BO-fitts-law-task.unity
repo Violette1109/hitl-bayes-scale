@@ -499,8 +499,8 @@ MonoBehaviour:
   warmStart: 1
   perfectRatingActive: 0
   perfectRatingInInitialRounds: 0
-  initialParametersDataPath: ExampleInitDataParameters.csv
-  initialObjectivesDataPath: ExampleInitDataObjectives.csv
+  initialParametersDataPath: warmstart_params.csv
+  initialObjectivesDataPath: warmstart_objectives.csv
   warmStartObjectiveFormat: auto
   questionnaireScaleForCsv: -1
   questionnaireSamplingRoundsForCsv: -1
@@ -613,6 +613,7 @@ MonoBehaviour:
   rounds15Btn: {fileID: 230017088}
   warmStartToggle: {fileID: 1683982804}
   randomAllocationToggle: {fileID: 1159306731}
+  optimizedToggle: {fileID: 0}
   startBtn: {fileID: 47043014}
   targetObjectiveKey: mental_demand
   optimizationRoundsFor10: 5

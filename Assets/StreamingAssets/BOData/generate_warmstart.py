@@ -24,40 +24,44 @@ PROMPT = f"""You are an expert in human-computer interaction and motor control.
 I need warm-start data for a Multi-Objective Bayesian Optimization study on circular movement tasks.
 
 Parameters:
-- circle_size: integer between 40 and 120 (pixel radius of the target circle)
-- circle_distance: integer between 220 and 760 (pixel distance to target)
-- movement_direction: integer between 0 and 180 (degrees)
+- button_size: integer between 40 and 120 (pixel radius of the target circle)
+- button_distance: integer between 220 and 760 (pixel distance to target)
+- button_hue: integer between 0 and 1
+- button_saturation: integer between 0 and 1
 
 Objectives:
-- task_completion_time: integer between 0 and 120000 (milliseconds, smaller is better)
-- accuracy: integer between 0 and 100 (percentage, larger is better)
-- mental_demand: integer between 1 and {LIKERT_MAX} (1=very low, {LIKERT_MAX}=very high, smaller is better)
+- speed: integer between 0 and 30000 (milliseconds, smaller is better)
+- accuracy: integer between 0 and 1300 (percentage, larger is better)
+- aesthetics: integer between 1 and {LIKERT_MAX} (1=very low, {LIKERT_MAX}=very high, larger is better)
+- usability: integer between 1 and {LIKERT_MAX} (1=very low, {LIKERT_MAX}=very high, larger is better)
 
 Domain rules:
-- Larger circles at shorter distances → faster completion, higher accuracy, lower mental demand
-- Smaller circles at longer distances → slower completion, lower accuracy, higher mental demand
-- movement_direction has moderate effect on all objectives
+- Larger buttons at shorter distances → faster completion, higher accuracy, lower mental demand
+- Smaller buttons at longer distances → slower completion, lower accuracy, higher mental demand
+- button_hue and button_saturation have moderate effect on all objectives
 - Include diverse trade-off configurations spread across the full design space
 
 IMPORTANT: All values MUST be strictly within the specified ranges.
 Do NOT generate values outside these bounds under any circumstances:
-- circle_size: MUST be between 40 and 120 (inclusive)
-- circle_distance: MUST be between 220 and 760 (inclusive)  
-- movement_direction: MUST be between 0 and 180 (inclusive)
-- task_completion_time: MUST be between 0 and 120000 (inclusive)
-- accuracy: MUST be between 0 and 100 (inclusive)
-- mental_demand: MUST be between 1 and {LIKERT_MAX} (inclusive)
+- button_size: MUST be between 40 and 120 (inclusive)
+- button_distance: MUST be between 220 and 760 (inclusive)  
+- button_hue: MUST be between 0 and 1 (inclusive)
+- button_saturation: MUST be between 0 and 1 (inclusive)
+- speed: MUST be between 0 and 30000 (inclusive)
+- accuracy: MUST be between 0 and 1300 (inclusive)
+- aesthetics: MUST be between 1 and {LIKERT_MAX} (inclusive)
+- usability: MUST be between 1 and {LIKERT_MAX} (inclusive)
 
 Generate exactly {NUM_ROWS} rows of data.
 
 Output ONLY a JSON object in this exact format, no explanation, no markdown:
 {{
   "params": [
-    {{"circle_size": 80, "circle_distance": 400, "movement_direction": 90}},
+    {{"button_size": 80, "button_distance": 400, "button_hue": 0.5, "button_saturation": 0.5}},
     ...
   ],
   "objectives": [
-    {{"task_completion_time": 5000, "accuracy": 85, "mental_demand": 2}},
+    {{"speed": 5000, "accuracy": 85, "aesthetics": 2, "usability": 2}},
     ...
   ]
 }}"""
@@ -101,23 +105,25 @@ def validate_and_write(data):
         raise ValueError("Need at least 2 rows")
 
     for i, (p, o) in enumerate(zip(params, objectives)):
-        assert 40 <= p["circle_size"] <= 120, f"Row {i}: circle_size out of bounds"
-        assert 220 <= p["circle_distance"] <= 760, f"Row {i}: circle_distance out of bounds"
-        assert 0 <= p["movement_direction"] <= 180, f"Row {i}: movement_direction out of bounds"
-        assert 0 <= o["task_completion_time"] <= 120000, f"Row {i}: task_completion_time out of bounds"
-        assert 0 <= o["accuracy"] <= 100, f"Row {i}: accuracy out of bounds"
-        assert 1 <= o["mental_demand"] <= LIKERT_MAX, f"Row {i}: mental_demand out of bounds (max={LIKERT_MAX})"
+        assert 40 <= p["button_size"] <= 120, f"Row {i}: button_size out of bounds"
+        assert 220 <= p["button_distance"] <= 760, f"Row {i}: button_distance out of bounds"
+        assert 0 <= p["button_hue"] <= 1, f"Row {i}: button_hue out of bounds"
+        assert 0 <= p["button_saturation"] <= 1, f"Row {i}: button_saturation out of bounds"
+        assert 0 <= o["speed"] <= 30000, f"Row {i}: speed out of bounds"
+        assert 0 <= o["accuracy"] <= 1300, f"Row {i}: accuracy out of bounds"
+        assert 1 <= o["aesthetics"] <= LIKERT_MAX, f"Row {i}: aesthetics out of bounds (max={LIKERT_MAX})"
+        assert 1 <= o["usability"] <= LIKERT_MAX, f"Row {i}: usability out of bounds (max={LIKERT_MAX})"
 
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     with open(PARAMS_FILE, "w") as f:
-        f.write("circle_size;circle_distance;movement_direction\n")
+        f.write("button_size;button_distance;button_hue;button_saturation\n")
         for p in params:
-            f.write(f"{p['circle_size']};{p['circle_distance']};{p['movement_direction']}\n")
+            f.write(f"{p['button_size']};{p['button_distance']};{p['button_hue']};{p['button_saturation']}\n")
 
     with open(OBJECTIVES_FILE, "w") as f:
-        f.write("task_completion_time;accuracy;mental_demand\n")
+        f.write("speed;accuracy;aesthetics;usability\n")
         for o in objectives:
-            f.write(f"{o['task_completion_time']};{o['accuracy']};{o['mental_demand']}\n")
+            f.write(f"{o['speed']};{o['accuracy']};{o['aesthetics']};{o['usability']}\n")
 
     print(f"✅ Written {len(params)} rows to:")
     print(f"   {PARAMS_FILE}")
