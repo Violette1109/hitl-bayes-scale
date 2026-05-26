@@ -601,7 +601,6 @@ def expected_observation_columns():
         "UserID",
         "Scale",
         "SamplingRounds",
-        "WarmStart",
         "Random",
         "OptimizedIntroduction",
         "Timestamp",
@@ -640,7 +639,6 @@ def append_observation_row(iteration, phase, scalarized_value, objective_raw, pa
         "UserID": USER_ID,
         "Scale": CONDITION_ID,
         "SamplingRounds": GROUP_ID,
-        "WarmStart": bool_to_csv(WARM_START),
         "Random": bool_to_csv(RANDOM_ALLOCATION),
         "OptimizedIntroduction": bool_to_csv(OPTIMIZED_INTRODUCTION),
         "Timestamp": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
@@ -859,7 +857,7 @@ def run_cabop(conn):
 
 def parse_init_and_validate(init_msg, forced_mode):
     global N_INITIAL, N_ITERATIONS, SEED, PROBLEM_DIM, NUM_OBJS
-    global WARM_START, RANDOM_ALLOCATION, OPTIMIZED_INTRODUCTION, CSV_PATH_PARAMETERS, CSV_PATH_OBJECTIVES, WARM_START_OBJECTIVE_FORMAT
+    global RANDOM_ALLOCATION, OPTIMIZED_INTRODUCTION, CSV_PATH_PARAMETERS, CSV_PATH_OBJECTIVES
     global USER_ID, CONDITION_ID, GROUP_ID, USER_LOG_ID, CONDITION_LOG_ID
     global OPTIMIZER_BACKEND, CABOP_MODE, CABOP_USE_COST_AWARE
     global CABOP_UPDATE_RULE, CABOP_ENABLE_COST_BUDGET, CABOP_MAX_CUMULATIVE_COST

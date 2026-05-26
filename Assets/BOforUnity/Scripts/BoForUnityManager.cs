@@ -1019,7 +1019,6 @@ namespace BOforUnity
             SetColumn("UserID", userId);
             SetColumn("Scale", conditionId);
             SetColumn("SamplingRounds", groupId);
-            SetColumn("WarmStart", warmStart ? "true" : "false");
             SetColumn("Random", questionnaireRandomForCsv ? "true" : "false");
             SetColumn("OptimizedIntroduction", questionnaireOptimisedForCsv ? "true" : "false");
             SetColumn("ConditionID", conditionId);

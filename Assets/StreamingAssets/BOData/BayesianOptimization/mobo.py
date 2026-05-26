@@ -251,7 +251,7 @@ def denormalize_to_original_obj(v_m1p1, lo, hi, smaller_is_better):
     return np.round(lo + (v + 1) * 0.5 * (hi - lo), 3)
 
 def expected_observation_columns():
-    return ['UserID','Scale','SamplingRounds','WarmStart','Random','OptimizedIntroduction','Timestamp','Iteration','Phase','IsPareto'] + objective_names + parameter_names
+    return ['UserID','Scale','SamplingRounds','Random','OptimizedIntroduction','Timestamp','Iteration','Phase','IsPareto'] + objective_names + parameter_names
 
 
 def bool_to_csv(value):
@@ -477,7 +477,7 @@ def generate_initial_data(conn, n_samples):
         y_np = y.cpu().numpy()
         x_den = [denormalize_to_original_param(x_np[j], parameters_info[j][0], parameters_info[j][1]) for j in range(PROBLEM_DIM)]
         y_den = [denormalize_to_original_obj(y_np[j], objectives_info[j][0], objectives_info[j][1], objectives_info[j][2]) for j in range(NUM_OBJS)]
-        row = [USER_ID, CONDITION_ID, GROUP_ID, bool_to_csv(WARM_START), bool_to_csv(RANDOM_ALLOCATION), bool_to_csv(OPTIMIZED_INTRODUCTION),
+        row = [USER_ID, CONDITION_ID, GROUP_ID, bool_to_csv(RANDOM_ALLOCATION), bool_to_csv(OPTIMIZED_INTRODUCTION),
                time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
                i+1, 'sampling', 'FALSE', *y_den, *x_den]
         with open(obs_csv, 'a', newline='') as f:
@@ -599,7 +599,7 @@ def save_xy(x_sample, y_sample, iteration):
         cols = expected_observation_columns()
         df = pd.DataFrame(columns=cols)
 
-    new_row = pd.DataFrame([[USER_ID, CONDITION_ID, GROUP_ID, bool_to_csv(WARM_START), bool_to_csv(RANDOM_ALLOCATION), bool_to_csv(OPTIMIZED_INTRODUCTION),
+    new_row = pd.DataFrame([[USER_ID, CONDITION_ID, GROUP_ID, bool_to_csv(RANDOM_ALLOCATION), bool_to_csv(OPTIMIZED_INTRODUCTION),
                              time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
                              iteration_index, 'optimization', 'FALSE',
                              *y_np[-1], *x_np[-1]]], columns=df.columns)

@@ -1590,7 +1590,6 @@ namespace BOforUnity.Examples
             ResolveFittsLogContext(manager, out string userId, out string conditionId, out string groupId);
             string iteration = GetLogIteration(manager);
             string phase = GetLogPhase(manager);
-            string warmStart = manager != null && manager.warmStart ? "true" : "false";
             string random = manager != null && manager.questionnaireRandomForCsv ? "true" : "false";
             string optimizedIntroduction = manager != null && manager.questionnaireOptimisedForCsv ? "true" : "false";
 
@@ -1606,7 +1605,7 @@ namespace BOforUnity.Examples
                 summaryPath,
                 new[]
                 {
-                    "UserID", "Scale", "SamplingRounds", "WarmStart", "Random", "OptimizedIntroduction",
+                    "UserID", "Scale", "SamplingRounds", "Random", "OptimizedIntroduction",
                     "Timestamp", "Iteration", "Phase", "LogType",
                     "TargetCount", "ConfiguredTrialCount", "CompletedTrials",
                     "CorrectClicks", "WrongClicks", "WrongTargetClicks", "PlayAreaMissClicks", "TotalClicks",
@@ -1618,7 +1617,7 @@ namespace BOforUnity.Examples
                 },
                 new[]
                 {
-                    userId, conditionId, groupId, warmStart, random, optimizedIntroduction, timestamp, iteration, phase, "summary",
+                    userId, conditionId, groupId, random, optimizedIntroduction, timestamp, iteration, phase, "summary",
                     FormatInt(targetCount), FormatInt(trialCount), FormatInt(trialResults.Count),
                     FormatInt(_correctClicks), FormatInt(_wrongClicksTotal), FormatInt(_wrongTargetClicksTotal),
                     FormatInt(_playAreaMissClicksTotal), FormatInt(totalClicks),
@@ -1635,7 +1634,7 @@ namespace BOforUnity.Examples
 
             string[] trialHeaders =
             {
-                "UserID", "Scale", "SamplingRounds", "WarmStart", "Random", "OptimizedIntroduction",
+                "UserID", "Scale", "SamplingRounds", "Random", "OptimizedIntroduction",
                 "Timestamp", "Iteration", "Phase", "LogType",
                 "TrialIndex", "TargetIndex", "TargetX", "TargetY", "ClickX", "ClickY", "ClickTimeMs",
                 "CenterDistancePixels", "WrongClicksBeforeHit", "WrongTargetClicksBeforeHit",
@@ -1652,7 +1651,7 @@ namespace BOforUnity.Examples
                     trialHeaders,
                     new[]
                     {
-                        userId, conditionId, groupId, warmStart, random, optimizedIntroduction, timestamp, iteration, phase, "trial",
+                        userId, conditionId, groupId, random, optimizedIntroduction, timestamp, iteration, phase, "trial",
                         FormatInt(result.trialIndex), FormatInt(result.targetIndex),
                         FormatCsvFloat(result.targetPosition.x), FormatCsvFloat(result.targetPosition.y),
                         FormatCsvFloat(result.clickPosition.x), FormatCsvFloat(result.clickPosition.y),
