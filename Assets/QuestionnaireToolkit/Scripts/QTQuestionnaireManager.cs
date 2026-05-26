@@ -90,7 +90,7 @@ namespace QuestionnaireToolkit.Scripts
         public string exportPath = "..select..";
 
         [Header("BO Context Logging")]
-        [Tooltip("Automatically add UserID, Scale, SamplingRounds, WarmStart, Random, and OptimizedIntroduction through Additional CSV Items.")]
+        [Tooltip("Automatically add UserID, Scale, SamplingRounds, Random, and OptimizedIntroduction through Additional CSV Items.")]
         public bool logBoContextColumns = true;
         [Tooltip("When available, read the context values from BoForUnityManager. If no manager is available, the fallback values below are used.")]
         public bool readBoContextFromManager = true;

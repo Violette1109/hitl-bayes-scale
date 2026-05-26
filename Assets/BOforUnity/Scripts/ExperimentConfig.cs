@@ -321,7 +321,7 @@ public class ExperimentConfig : MonoBehaviour
         boManager.questionnaireScaleForCsv = _likertMax.ToString();
         boManager.questionnaireSamplingRoundsForCsv = _samplingRounds.ToString();
         boManager.questionnaireRandomForCsv = _randomAllocation;
-        boManager.questionnaireOptimisedForCsv = _optimizedIntroduction;
+        boManager.questionnaireOptimisedForCsv = _optimized;
 
         boManager.totalIterations = _warmStart
             ? boManager.numOptimizationIterations

@@ -482,7 +482,7 @@ MonoBehaviour:
       smallerIsBetter: 0
       cabopWeight: 1
   currentIteration: 0
-  totalIterations: 5
+  totalIterations: 8
   perfectRating: 0
   perfectRatingStart: 0
   perfectRatingIteration: 0
@@ -496,7 +496,7 @@ MonoBehaviour:
   numOptimizationIterations: 5
   seed: 3
   enableSamplingEdit: 1
-  warmStart: 1
+  warmStart: 0
   perfectRatingActive: 0
   perfectRatingInInitialRounds: 0
   initialParametersDataPath: warmstart_params.csv
