@@ -56,7 +56,6 @@ public class ExperimentConfig : MonoBehaviour
 
     private static int    _likertMax         = 5;
     private static int    _samplingRounds    = 10;
-    private static bool   _warmStart         = false;
     private static bool   _randomAllocation  = false;
     private static bool   _optimized         = false;
     private static bool   _experimentStarted = false;
@@ -67,7 +66,6 @@ public class ExperimentConfig : MonoBehaviour
     {
         _likertMax         = 5;
         _samplingRounds    = 10;
-        _warmStart         = false;
         _randomAllocation  = false;
         _optimized         = false;
         _experimentStarted = false;
@@ -125,7 +123,6 @@ public class ExperimentConfig : MonoBehaviour
             HighlightRounds(rounds15Btn); 
         });
         
-        warmStartToggle.onValueChanged.AddListener(val => _warmStart = val);
         randomAllocationToggle.onValueChanged.AddListener(OnRandomAllocationChanged);
         if (optimizedToggle != null)
         {
@@ -133,7 +130,6 @@ public class ExperimentConfig : MonoBehaviour
         }
         startBtn.onClick.AddListener(OnStartClicked);
 
-        _warmStart = warmStartToggle.isOn;
         _randomAllocation = randomAllocationToggle.isOn;
         _optimized = optimizedToggle != null && optimizedToggle.isOn;
 
@@ -317,20 +313,19 @@ public class ExperimentConfig : MonoBehaviour
             boManager.enableFinalDesignRound = true;
         }
 
-        boManager.warmStart = _warmStart;
         boManager.questionnaireScaleForCsv = _likertMax.ToString();
         boManager.questionnaireSamplingRoundsForCsv = _samplingRounds.ToString();
         boManager.questionnaireRandomForCsv = _randomAllocation;
         boManager.questionnaireOptimisedForCsv = _optimized;
 
-        boManager.totalIterations = _warmStart
-            ? boManager.numOptimizationIterations
-            : boManager.numSamplingIterations + boManager.numOptimizationIterations;
+        //boManager.totalIterations = _warmStart
+            //? boManager.numOptimizationIterations
+            //: boManager.numSamplingIterations + boManager.numOptimizationIterations;
 
-        if (_warmStart)
-        {
-            boManager.initialParametersDataPath = "warmstart_params.csv";
-            boManager.initialObjectivesDataPath = "warmstart_objectives.csv";
-        }
+        //if (_warmStart)
+        //{
+        //    boManager.initialParametersDataPath = "warmstart_params.csv";
+        //    boManager.initialObjectivesDataPath = "warmstart_objectives.csv";
+        //}
     }
 }
