@@ -207,6 +207,16 @@ public class ExperimentConfig : MonoBehaviour
 
     void OnStartClicked()
     {
+        // Re-read toggle states directly at submit time to capture any state changes
+        // that may not have propagated through the onValueChanged listeners (e.g. due
+        // to Toggle Group interactions or UI timing when the panel was inactive).
+        _warmStart = warmStartToggle.isOn;
+        if (optimizedToggle != null)
+            _optimized = optimizedToggle.isOn;
+        // _randomAllocation is intentionally kept from its listener so that the side-effects
+        // applied by OnRandomAllocationChanged (round-button interactability, _samplingRounds)
+        // remain in sync; reading isOn here would duplicate only the flag itself.
+
         _experimentStarted = true;
         ApplyConfig();
 
