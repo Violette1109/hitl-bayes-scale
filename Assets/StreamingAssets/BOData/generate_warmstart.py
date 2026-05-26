@@ -33,7 +33,8 @@ Objectives:
 - speed: integer between 0 and 30000 (milliseconds, smaller is better)
 - accuracy: integer between 0 and 1300 (percentage, larger is better)
 - aesthetics: integer between 1 and {LIKERT_MAX} (1=very low, {LIKERT_MAX}=very high, larger is better)
-- usability: integer between 1 and {LIKERT_MAX} (1=very low, {LIKERT_MAX}=very high, larger is better)
+- usability1: integer between 1 and {LIKERT_MAX} (1=very low, {LIKERT_MAX}=very high, larger is better)
+- usability2: integer between 1 and {LIKERT_MAX} (1=very low, {LIKERT_MAX}=very high, larger is better)
 
 Domain rules:
 - Larger buttons at shorter distances → faster completion, higher accuracy, lower mental demand
@@ -50,7 +51,8 @@ Do NOT generate values outside these bounds under any circumstances:
 - speed: MUST be between 0 and 30000 (inclusive)
 - accuracy: MUST be between 0 and 1300 (inclusive)
 - aesthetics: MUST be between 1 and {LIKERT_MAX} (inclusive)
-- usability: MUST be between 1 and {LIKERT_MAX} (inclusive)
+- usability1: MUST be between 1 and {LIKERT_MAX} (inclusive)
+- usability2: MUST be between 1 and {LIKERT_MAX} (inclusive)
 
 Generate exactly {NUM_ROWS} rows of data.
 
@@ -61,7 +63,7 @@ Output ONLY a JSON object in this exact format, no explanation, no markdown:
     ...
   ],
   "objectives": [
-    {{"speed": 5000, "accuracy": 85, "aesthetics": 2, "usability": 2}},
+    {{"speed": 5000, "accuracy": 85, "aesthetics": 2, "usability1": 2, "usability2": 2}},
     ...
   ]
 }}"""
@@ -112,7 +114,8 @@ def validate_and_write(data):
         assert 0 <= o["speed"] <= 30000, f"Row {i}: speed out of bounds"
         assert 0 <= o["accuracy"] <= 1300, f"Row {i}: accuracy out of bounds"
         assert 1 <= o["aesthetics"] <= LIKERT_MAX, f"Row {i}: aesthetics out of bounds (max={LIKERT_MAX})"
-        assert 1 <= o["usability"] <= LIKERT_MAX, f"Row {i}: usability out of bounds (max={LIKERT_MAX})"
+        assert 1 <= o["usability1"] <= LIKERT_MAX, f"Row {i}: usability1 out of bounds (max={LIKERT_MAX})"
+        assert 1 <= o["usability2"] <= LIKERT_MAX, f"Row {i}: usability2 out of bounds (max={LIKERT_MAX})"
 
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     with open(PARAMS_FILE, "w") as f:
@@ -121,9 +124,9 @@ def validate_and_write(data):
             f.write(f"{p['button_size']};{p['button_distance']};{p['button_hue']};{p['button_saturation']}\n")
 
     with open(OBJECTIVES_FILE, "w") as f:
-        f.write("speed;accuracy;aesthetics;usability\n")
+        f.write("speed;accuracy;aesthetics;usability1;usability2\n")
         for o in objectives:
-            f.write(f"{o['speed']};{o['accuracy']};{o['aesthetics']};{o['usability']}\n")
+            f.write(f"{o['speed']};{o['accuracy']};{o['aesthetics']};{o['usability1']};{o['usability2']}\n")
 
     print(f"✅ Written {len(params)} rows to:")
     print(f"   {PARAMS_FILE}")
