@@ -505,7 +505,7 @@ MonoBehaviour:
   questionnaireScaleForCsv: -1
   questionnaireSamplingRoundsForCsv: -1
   questionnaireRandomForCsv: 0
-  questionnaireOptimisedForCsv: 1
+  questionnaireOptimisedForCsv: 0
   optimizerBackend: 0
   cabopObjectiveMode: 1
   cabopUseCostAwareAcquisition: 1
@@ -613,7 +613,7 @@ MonoBehaviour:
   rounds15Btn: {fileID: 230017088}
   warmStartToggle: {fileID: 1683982804}
   randomAllocationToggle: {fileID: 1159306731}
-  optimizedToggle: {fileID: 0}
+  optimizedToggle: {fileID: 2131464061}
   startBtn: {fileID: 47043014}
   targetObjectiveKey: mental_demand
   optimizationRoundsFor10: 5
@@ -21741,7 +21741,7 @@ MonoBehaviour:
   onValueChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_IsOn: 1
+  m_IsOn: 0
 --- !u!1 &2135995905
 GameObject:
   m_ObjectHideFlags: 0
