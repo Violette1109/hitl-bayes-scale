@@ -367,6 +367,23 @@ def get_cfg_int(cfg, key, default=None, required=False):
         raise ValueError(f"Missing required config field '{key}'")
     return int(default) if default is not None else None
 
+def get_cfg_bool(cfg, key, default=False):
+    if key not in cfg or cfg.get(key) is None:
+        return bool(default)
+    value = cfg.get(key)
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in ("true", "1", "yes", "y", "on"):
+            return True
+        if normalized in ("false", "0", "no", "n", "off", ""):
+            return False
+    if isinstance(value, (int, float)):
+        if value in (0, 1):
+            return bool(value)
+    raise ValueError(f"Config field '{key}' must be a boolean, got {value!r}")
+
 # -------------------- objective evaluation --------------------
 def recv_objectives_blocking(conn):
     while True:
@@ -720,7 +737,7 @@ def main():
         SEED           = get_cfg_int(cfg, "seed", default=SEED)
         PROBLEM_DIM    = get_cfg_int(cfg, "nParameters", required=True)
         NUM_OBJS       = get_cfg_int(cfg, "nObjectives", required=True)
-        WARM_START     = bool(cfg.get("warmStart", False))
+        WARM_START     = get_cfg_bool(cfg, "warmStart", default=False)
 
         CSV_PATH_PARAMETERS = str(cfg.get("initialParametersDataPath") or "")
         CSV_PATH_OBJECTIVES = str(cfg.get("initialObjectivesDataPath") or "")

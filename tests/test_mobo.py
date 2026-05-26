@@ -1132,6 +1132,14 @@ class MoboTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self._run_main_with_init(mobo, init_msg)
 
+    def test_main_parses_warm_start_string_false_as_false(self):
+        mobo = load_mobo_module()
+        init_msg = self._base_init_message()
+        init_msg["config"]["warmStart"] = "false"
+        init_msg["config"]["numSamplingIterations"] = 0
+        with self.assertRaises(ValueError):
+            self._run_main_with_init(mobo, init_msg)
+
     def test_main_rejects_non_positive_optimizer_hyperparams(self):
         mobo = load_mobo_module()
         init_msg = self._base_init_message()
