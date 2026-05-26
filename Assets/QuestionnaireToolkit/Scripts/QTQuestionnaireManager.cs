@@ -277,6 +277,8 @@ namespace QuestionnaireToolkit.Scripts
         [HideInInspector]
         public QTManager _qtManager;
         private IQuestionnaireOptimizationBridge _cachedOptimizationBridge;
+        private const string NoConditionToken = "-1";
+        private const bool AllowExistingUserFolderForQuestionnaireCsv = true;
         private bool _contextUserFolderReserved;
         private string _contextUserFolderRoot;
         private string _contextRequestedUserId;
@@ -2812,9 +2814,9 @@ namespace QuestionnaireToolkit.Scripts
             _contextResolvedUserId = LogDataFolderUtility.GetOrCreateUserFolderTokenForCondition(
                 normalizedRoot,
                 normalizedRequestedUserId,
-                "-1",
-                true,
-                true
+                NoConditionToken,
+                AllowExistingUserFolderForQuestionnaireCsv,
+                AllowExistingUserFolderForQuestionnaireCsv
             );
             _contextUserFolderRoot = normalizedRoot;
             _contextRequestedUserId = normalizedRequestedUserId;
