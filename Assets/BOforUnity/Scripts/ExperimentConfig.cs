@@ -283,14 +283,6 @@ public class ExperimentConfig : MonoBehaviour
                         fieldRandomize.SetValue(comp, _randomAllocation);
                         Debug.Log($"[ExperimentConfig 連動] 成功將 FittsLawTask 內部的 randomizeDesignParametersOnBegin 設為: {_randomAllocation}");
                     }
-
-                    // 2. 🟢 控制確定性隨機種子開關 (useDeterministicRandomDesignSeed)
-                    var fieldDeterministic = comp.GetType().GetField("useDeterministicRandomDesignSeed", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
-                    if (fieldDeterministic != null)
-                    {
-                        fieldDeterministic.SetValue(comp, _randomAllocation);
-                        Debug.Log($"[ExperimentConfig 連動] 成功將 FittsLawTask 內部的 useDeterministicRandomDesignSeed 設為: {_randomAllocation}");
-                    }
                 }
                 catch (System.Exception ex)
                 {
