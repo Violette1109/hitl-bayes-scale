@@ -280,7 +280,6 @@ namespace QuestionnaireToolkit.Scripts
         private bool _contextUserFolderReserved;
         private string _contextUserFolderRoot;
         private string _contextRequestedUserId;
-        private string _contextRequestedConditionId;
         private string _contextResolvedUserId;
 
         private bool EnsureVisiblePage(string caller)
@@ -2779,50 +2778,33 @@ namespace QuestionnaireToolkit.Scripts
         private string ResolveBoContextResultsDirectory(string baseDirectory)
         {
             string resolvedUserId = null;
-            string resolvedConditionId = null;
-            string resolvedGroupId = null;
             bool resolvedFromBridge = readBoContextFromManager &&
                                       TryGetBoContextFromManager(
                                           out resolvedUserId,
-                                          out resolvedConditionId,
-                                          out resolvedGroupId);
+                                          out _,
+                                          out _);
             if (!resolvedFromBridge)
             {
                 resolvedUserId = NormalizeContextValue(contextUserId);
-                resolvedConditionId = NormalizeContextValue(contextConditionId);
-                resolvedGroupId = NormalizeContextValue(contextGroupId);
             }
 
-            resolvedUserId = ResolveUniqueContextUserFolder(
-                baseDirectory,
-                resolvedUserId,
-                resolvedConditionId,
-                resolvedFromBridge
-            );
+            resolvedUserId = ResolveUniqueContextUserFolder(baseDirectory, resolvedUserId);
             if (!resolvedFromBridge)
                 contextUserId = resolvedUserId;
 
-            return Path.Combine(
-                baseDirectory,
-                NormalizeLogFolderToken(resolvedUserId),
-                NormalizeLogFolderToken(resolvedConditionId)
-            );
+            return Path.Combine(baseDirectory, NormalizeLogFolderToken(resolvedUserId));
         }
 
         private string ResolveUniqueContextUserFolder(
             string baseDirectory,
-            string requestedUserId,
-            string conditionId,
-            bool allowExistingRequestedUserFolder)
+            string requestedUserId)
         {
             string normalizedRoot = Path.GetFullPath(baseDirectory);
             string normalizedRequestedUserId = NormalizeLogFolderToken(requestedUserId);
-            string normalizedConditionId = NormalizeLogFolderToken(conditionId);
 
             if (_contextUserFolderReserved &&
                 string.Equals(_contextUserFolderRoot, normalizedRoot, StringComparison.OrdinalIgnoreCase) &&
-                string.Equals(_contextRequestedUserId, normalizedRequestedUserId, StringComparison.Ordinal) &&
-                string.Equals(_contextRequestedConditionId, normalizedConditionId, StringComparison.Ordinal))
+                string.Equals(_contextRequestedUserId, normalizedRequestedUserId, StringComparison.Ordinal))
             {
                 return _contextResolvedUserId;
             }
@@ -2830,13 +2812,12 @@ namespace QuestionnaireToolkit.Scripts
             _contextResolvedUserId = LogDataFolderUtility.GetOrCreateUserFolderTokenForCondition(
                 normalizedRoot,
                 normalizedRequestedUserId,
-                normalizedConditionId,
-                allowExistingRequestedUserFolder,
-                allowExistingRequestedUserFolder
+                "-1",
+                true,
+                true
             );
             _contextUserFolderRoot = normalizedRoot;
             _contextRequestedUserId = normalizedRequestedUserId;
-            _contextRequestedConditionId = normalizedConditionId;
             _contextUserFolderReserved = true;
 
             if (!string.Equals(normalizedRequestedUserId, _contextResolvedUserId, StringComparison.Ordinal))
