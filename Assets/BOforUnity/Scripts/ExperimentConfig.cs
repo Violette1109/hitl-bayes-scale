@@ -241,17 +241,52 @@ public class ExperimentConfig : MonoBehaviour
             $"[ApplyConfig] UserID={_userId}, ConditionID={boManager.conditionId}, GroupID={boManager.groupId}, RandomAllocation={_randomAllocation}"
         );
 
-        // 動態調整問卷 Slider 上限
+        // ─────────────────────────────────────────────
+        // 動態調整問卷 Slider 上限 ＆ 精準鎖定分數 Placeholder
+        // ─────────────────────────────────────────────
         int updatedSlidersCount = 0;
         Slider[] allSliders = Resources.FindObjectsOfTypeAll<Slider>();
         foreach (var s in allSliders)
         {
             if (s.gameObject.name == "SliderBar" || s.gameObject.activeInHierarchy)
             {
+                // 1. 設定滑桿基本邊界
                 s.minValue = 1;
                 s.maxValue = _likertMax;
                 s.wholeNumbers = true;
-                s.value = (_likertMax + 1) / 2; 
+
+                // 🟢 2. 【精準狙擊】只去尋找名字叫 "score" 的那個中央數值顯示組件
+                TextMeshProUGUI[] textComponents = s.gameObject.GetComponentsInChildren<TextMeshProUGUI>(true);
+                foreach (var txt in textComponents)
+                {
+                    // 這裡用 System.StringComparison.OrdinalIgnoreCase 做到大小寫防呆
+                    // 只有當這個 Text 物件的名字叫 "score" 或 "scoretext" 時才蓋台！
+                    if (txt != null && (txt.gameObject.name.Equals("score", System.StringComparison.OrdinalIgnoreCase) || 
+                                        txt.gameObject.name.Contains("Score")))
+                    {
+                        txt.text = "score";
+                    }
+                }
+
+                // 備用防禦：舊版 UI Text 相同邏輯精準鎖定
+                Text[] oldTexts = s.gameObject.GetComponentsInChildren<Text>(true);
+                foreach (var txt in oldTexts)
+                {
+                    if (txt != null && (txt.gameObject.name.Equals("score", System.StringComparison.OrdinalIgnoreCase) || 
+                                        txt.gameObject.name.Contains("Score")))
+                    {
+                        txt.text = "score";
+                    }
+                }
+
+                
+
+                var containerCanvas = s.GetComponentInParent<Canvas>();
+                if (containerCanvas != null)
+                {
+                    Canvas.ForceUpdateCanvases();
+                }
+                
                 updatedSlidersCount++;
             }
         }
@@ -284,7 +319,7 @@ public class ExperimentConfig : MonoBehaviour
                         Debug.Log($"[ExperimentConfig 連動] 成功將 FittsLawTask 內部的 randomizeDesignParametersOnBegin 設為: {_randomAllocation}");
                     }
 
-                    // 2. 🟢 控制確定性隨機種子開關 (useDeterministicRandomDesignSeed)
+                    // 2. 控制確定性隨機種子開關 (useDeterministicRandomDesignSeed)
                     var fieldDeterministic = comp.GetType().GetField("useDeterministicRandomDesignSeed", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
                     if (fieldDeterministic != null)
                     {
@@ -292,7 +327,6 @@ public class ExperimentConfig : MonoBehaviour
                         Debug.Log($"[ExperimentConfig 連動] 成功將 FittsLawTask 內部的 useDeterministicRandomDesignSeed 設為: {_randomAllocation}");
                     }
                 }
-    
                 catch (System.Exception ex)
                 {
                     Debug.LogWarning($"[ExperimentConfig] 連動 FittsLawTask 隨機雙勾勾時發生例外：{ex.Message}");
