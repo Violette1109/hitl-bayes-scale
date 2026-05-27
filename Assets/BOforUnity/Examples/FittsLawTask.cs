@@ -39,7 +39,7 @@ namespace BOforUnity.Examples
 
         [Header("Task")]
         [Min(2)] public int targetCount = 12;
-        [Min(1)] public int trialCount = 10;
+        [Min(1)] public int trialCount = 5;
         public bool startOnAwake = true;
         [Min(0f)] public float startDelaySeconds = 0.25f;
         public bool restartWithKey = true;
