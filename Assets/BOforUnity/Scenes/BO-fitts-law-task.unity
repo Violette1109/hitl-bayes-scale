@@ -256,7 +256,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   targetCount: 12
-  trialCount: 10
+  trialCount: 5
   startOnAwake: 1
   startDelaySeconds: 0.25
   restartWithKey: 1
