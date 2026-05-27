@@ -591,13 +591,14 @@ class BayesOpt:
                     u_best = result.x
 
         # Validate bounds
-        assert np.all(min_x >= self.space.bounds[:, 0]), "Solution below lower bounds"
-        assert np.all(min_x <= self.space.bounds[:, 1]), "Solution above upper bounds"
-
+        if not np.all(min_x >= self.space.bounds[:, 0]):
+            raise ValueError("Solution below lower bounds")
+        if not np.all(min_x <= self.space.bounds[:, 1]):
+            raise ValueError("Solution above upper bounds")
         # Compute metrics for result
         predicted_cost = float(
             self.cost_model.smooth_cost(
-                u_best if u_best is not None else self._to_unit(min_x),
+                self._from_unit(u_best) if u_best is not None else min_x,
                 self._numpy_to_design,
                 self._design_to_numpy,
             )[0]

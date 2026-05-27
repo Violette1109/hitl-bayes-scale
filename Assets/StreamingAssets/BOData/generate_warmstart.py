@@ -11,7 +11,7 @@ LIKERT_MAX = int(sys.argv[1]) if len(sys.argv) > 1 else 5
 
 # ── 設定路徑（動態向外追溯，確保路徑在任何 Mac 目錄下都正確） ──
 current_script_path = pathlib.Path(__file__).resolve()
-OUTPUT_DIR = "/Users/violetvwv/Desktop/Bayesian-Optimization-for-Unity-main/Assets/StreamingAssets/BOData/InitData"
++OUTPUT_DIR = str(pathlib.Path(__file__).resolve().parent / "InitData")
 
 PARAMS_FILE = os.path.join(OUTPUT_DIR, "warmstart_params.csv")
 OBJECTIVES_FILE = os.path.join(OUTPUT_DIR, "warmstart_objectives.csv")
@@ -69,7 +69,7 @@ def generate_backup_data(likert_max, num_rows=10):
         })
     return data
 
-def call_qwen(prompt):
+def call_llm(prompt):
     print(f"🤖 Calling {MODEL} via Ollama (Likert max = {LIKERT_MAX}, temperature=0.2)...")
     try:
         response = requests.post(

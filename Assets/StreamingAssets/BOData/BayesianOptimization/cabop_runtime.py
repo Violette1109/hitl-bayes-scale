@@ -861,6 +861,7 @@ def parse_init_and_validate(init_msg, forced_mode):
     global USER_ID, CONDITION_ID, GROUP_ID, USER_LOG_ID, CONDITION_LOG_ID
     global OPTIMIZER_BACKEND, CABOP_MODE, CABOP_USE_COST_AWARE
     global CABOP_UPDATE_RULE, CABOP_ENABLE_COST_BUDGET, CABOP_MAX_CUMULATIVE_COST
+    global WARM_START, WARM_START_OBJECTIVE_FORMAT
 
     cfg = init_msg.get("config", {}) or {}
 

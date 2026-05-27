@@ -650,7 +650,8 @@ def bo_execute(conn, seed, iterations, initial_samples):
 def main():
     global N_INITIAL, N_ITERATIONS, BATCH_SIZE, NUM_RESTARTS, RAW_SAMPLES, MC_SAMPLES, SEED
     global PROBLEM_DIM, NUM_OBJS, problem_bounds
-    global RANDOM_ALLOCATION, OPTIMIZED_INTRODUCTION, CSV_PATH_PARAMETERS, CSV_PATH_OBJECTIVES
+    global WARM_START, RANDOM_ALLOCATION, OPTIMIZED_INTRODUCTION
+    global CSV_PATH_PARAMETERS, CSV_PATH_OBJECTIVES, WARM_START_OBJECTIVE_FORMAT
     global USER_ID, CONDITION_ID, GROUP_ID, USER_LOG_ID, CONDITION_LOG_ID
     global parameter_names, objective_names, parameters_info, objectives_info
     global SOCKET_ACCEPT_TIMEOUT_SEC
