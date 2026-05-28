@@ -213,7 +213,7 @@ public class ExperimentConfig : MonoBehaviour
         _experimentStarted = true;
         ApplyConfig();
 
-        if (ShouldUseRandomCondition())
+        if (ShouldUseRandomCondition)
         {
             configPanel.SetActive(false);
 
@@ -249,7 +249,7 @@ public class ExperimentConfig : MonoBehaviour
         if (conditionManager != null)
         {
             conditionManager.SetConditionMode(
-                ShouldUseRandomCondition()
+                ShouldUseRandomCondition
                     ? FittsLawConditionManager.ConditionMode.Random
                     : FittsLawConditionManager.ConditionMode.AdaptiveBo
             );
