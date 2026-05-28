@@ -180,6 +180,25 @@ namespace BOforUnity.Examples
             QueueNextRound();
         }
 
+        public void SetConditionMode(ConditionMode mode)
+        {
+            if (conditionMode == mode)
+                return;
+
+            conditionMode = mode;
+            ResolveReferences();
+            ApplyConditionConfiguration();
+        }
+
+        public void StartConfiguredCondition()
+        {
+            if (conditionMode == ConditionMode.AdaptiveBo || _started || _advanceQueued)
+                return;
+
+            _advanceQueued = true;
+            StartCoroutine(BeginNextRoundAfterDelay());
+        }
+
         public void RequestNextIteration()
         {
             if (conditionMode == ConditionMode.AdaptiveBo)

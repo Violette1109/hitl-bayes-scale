@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using BOforUnity;
+using BOforUnity.Examples;
 
 public class ExperimentConfig : MonoBehaviour
 {
@@ -50,6 +51,8 @@ public class ExperimentConfig : MonoBehaviour
 
     [Header("Manager References")]
     public BoForUnityManager boManager;
+
+    private FittsLawConditionManager _fittsLawConditionManager;
 
     private readonly Color _selectedColor = new Color(0.498f, 0.467f, 0.867f);
     private readonly Color _defaultColor  = new Color(0.9f, 0.9f, 0.9f);
@@ -210,6 +213,20 @@ public class ExperimentConfig : MonoBehaviour
         _experimentStarted = true;
         ApplyConfig();
 
+        if (ShouldUseRandomCondition())
+        {
+            configPanel.SetActive(false);
+
+            if (boManager.welcomePanel != null)
+                boManager.welcomePanel.SetActive(false);
+
+            if (boManager.nextButton != null)
+                boManager.nextButton.SetActive(false);
+
+            ResolveFittsLawConditionManager()?.StartConfiguredCondition();
+            return;
+        }
+
         if (boManager.pythonStarter != null)
             boManager.pythonStarter.enabled = true;
 
@@ -227,6 +244,16 @@ public class ExperimentConfig : MonoBehaviour
     {
         if (!string.IsNullOrEmpty(_userId))
             boManager.userId = _userId;
+
+        FittsLawConditionManager conditionManager = ResolveFittsLawConditionManager();
+        if (conditionManager != null)
+        {
+            conditionManager.SetConditionMode(
+                ShouldUseRandomCondition()
+                    ? FittsLawConditionManager.ConditionMode.Random
+                    : FittsLawConditionManager.ConditionMode.AdaptiveBo
+            );
+        }
 
         // 自動對照組 Condition ID 編碼
         if (_likertMax == 5) boManager.conditionId = "5";
@@ -366,5 +393,18 @@ public class ExperimentConfig : MonoBehaviour
             boManager.initialParametersDataPath = "warmstart_params.csv";
             boManager.initialObjectivesDataPath = "warmstart_objectives.csv";
         }
+    }
+
+    bool ShouldUseRandomCondition()
+    {
+        return _randomAllocation;
+    }
+
+    FittsLawConditionManager ResolveFittsLawConditionManager()
+    {
+        if (_fittsLawConditionManager == null)
+            _fittsLawConditionManager = FindObjectOfType<FittsLawConditionManager>();
+
+        return _fittsLawConditionManager;
     }
 }
