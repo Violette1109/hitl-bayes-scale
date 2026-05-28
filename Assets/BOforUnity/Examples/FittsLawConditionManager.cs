@@ -169,15 +169,12 @@ namespace BOforUnity.Examples
             }
         }
 
-        public void SetConditionMode(ConditionMode mode, bool beginIfNeeded = true)
+        public void SetConditionMode(ConditionMode mode, bool autoStartBaselineRound = true)
         {
             conditionMode = mode;
             ApplyConditionConfiguration();
 
-            if (!beginIfNeeded ||
-                mode == ConditionMode.AdaptiveBo ||
-                _started ||
-                !isActiveAndEnabled)
+            if (!autoStartBaselineRound || ShouldSkipBaselineRoundStart())
             {
                 return;
             }
@@ -587,10 +584,15 @@ namespace BOforUnity.Examples
             if (nextRoundDelaySeconds > 0f)
                 yield return new WaitForSecondsRealtime(nextRoundDelaySeconds);
 
-            if (conditionMode == ConditionMode.AdaptiveBo || _started || _advanceQueued)
+            if (ShouldSkipBaselineRoundStart())
                 yield break;
 
             BeginNextRound();
+        }
+
+        private bool ShouldSkipBaselineRoundStart()
+        {
+            return conditionMode == ConditionMode.AdaptiveBo || _started || _advanceQueued || !isActiveAndEnabled;
         }
 
         private void BeginNextRound()
