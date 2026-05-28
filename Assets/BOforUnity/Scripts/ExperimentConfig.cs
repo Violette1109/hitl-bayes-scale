@@ -2,7 +2,6 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using BOforUnity;
-using BOforUnity.Examples;
 
 public class ExperimentConfig : MonoBehaviour
 {
@@ -52,7 +51,8 @@ public class ExperimentConfig : MonoBehaviour
     [Header("Manager References")]
     public BoForUnityManager boManager;
 
-    private FittsLawConditionManager _fittsLawConditionManager;
+    // 🟢 已改成通用的 MonoBehaviour 防止編譯紅字
+    private MonoBehaviour _fittsLawConditionManager;
 
     private readonly Color _selectedColor = new Color(0.498f, 0.467f, 0.867f);
     private readonly Color _defaultColor  = new Color(0.9f, 0.9f, 0.9f);
@@ -223,7 +223,20 @@ public class ExperimentConfig : MonoBehaviour
             if (boManager.nextButton != null)
                 boManager.nextButton.SetActive(false);
 
-            ResolveFittsLawConditionManager()?.StartConfiguredCondition();
+            // 🟢 改用反射安全呼叫 StartConfiguredCondition() 方法
+            var conditionManager = ResolveFittsLawConditionManager();
+            if (conditionManager != null)
+            {
+                var method = conditionManager.GetType().GetMethod("StartConfiguredCondition");
+                if (method != null)
+                {
+                    method.Invoke(conditionManager, null);
+                }
+                else
+                {
+                    Debug.LogWarning("[ExperimentConfig] 找不到 StartConfiguredCondition 方法。");
+                }
+            }
             return;
         }
 
@@ -245,14 +258,28 @@ public class ExperimentConfig : MonoBehaviour
         if (!string.IsNullOrEmpty(_userId))
             boManager.userId = _userId;
 
-        FittsLawConditionManager conditionManager = ResolveFittsLawConditionManager();
+        // 🟢 改用反射安全設定 ConditionMode 列舉
+        var conditionManager = ResolveFittsLawConditionManager();
         if (conditionManager != null)
         {
-            conditionManager.SetConditionMode(
-                ShouldUseRandomCondition
-                    ? FittsLawConditionManager.ConditionMode.Random
-                    : FittsLawConditionManager.ConditionMode.AdaptiveBo
-            );
+            try
+            {
+                var method = conditionManager.GetType().GetMethod("SetConditionMode");
+                if (method != null)
+                {
+                    // 動態獲取內部的 ConditionMode 列舉類型
+                    var enumType = conditionManager.GetType().GetNestedType("ConditionMode");
+                    if (enumType != null)
+                    {
+                        var enumValue = System.Enum.Parse(enumType, ShouldUseRandomCondition ? "Random" : "AdaptiveBo");
+                        method.Invoke(conditionManager, new object[] { enumValue });
+                    }
+                }
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogWarning($"[ExperimentConfig] 動態設定 ConditionMode 失敗: {ex.Message}");
+            }
         }
 
         // 自動對照組 Condition ID 編碼
@@ -286,8 +313,6 @@ public class ExperimentConfig : MonoBehaviour
                 TextMeshProUGUI[] textComponents = s.gameObject.GetComponentsInChildren<TextMeshProUGUI>(true);
                 foreach (var txt in textComponents)
                 {
-                    // 這裡用 System.StringComparison.OrdinalIgnoreCase 做到大小寫防呆
-                    // 只有當這個 Text 物件的名字叫 "score" 或 "scoretext" 時才蓋台！
                     if (txt != null && (txt.gameObject.name.Equals("score", System.StringComparison.OrdinalIgnoreCase) || 
                                         txt.gameObject.name.Contains("Score")))
                     {
@@ -305,8 +330,6 @@ public class ExperimentConfig : MonoBehaviour
                         txt.text = "score";
                     }
                 }
-
-                
 
                 var containerCanvas = s.GetComponentInParent<Canvas>();
                 if (containerCanvas != null)
@@ -397,10 +420,20 @@ public class ExperimentConfig : MonoBehaviour
 
     private bool ShouldUseRandomCondition => _randomAllocation;
 
-    private FittsLawConditionManager ResolveFittsLawConditionManager()
+    private MonoBehaviour ResolveFittsLawConditionManager()
     {
         if (_fittsLawConditionManager == null)
-            _fittsLawConditionManager = FindObjectOfType<FittsLawConditionManager>();
+        {
+            MonoBehaviour[] allComponents = FindObjectsOfType<MonoBehaviour>();
+            foreach (var comp in allComponents)
+            {
+                if (comp != null && comp.GetType().Name == "FittsLawConditionManager")
+                {
+                    _fittsLawConditionManager = comp;
+                    break;
+                }
+            }
+        }
 
         return _fittsLawConditionManager;
     }
