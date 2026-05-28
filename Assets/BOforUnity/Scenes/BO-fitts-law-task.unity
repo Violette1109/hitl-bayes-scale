@@ -286,7 +286,7 @@ MonoBehaviour:
   buttonDistanceRangePixels: {x: 464, y: 760}
   buttonHueRange: {x: 0, y: 1}
   buttonSaturationRange: {x: 0, y: 1}
-  randomizeDesignParametersOnBegin: 0
+  randomizeDesignParametersOnBegin: 1
   useDeterministicRandomDesignSeed: 0
   randomDesignSeed: 98765
   targetSelectionMode: 0
@@ -19510,18 +19510,6 @@ MonoBehaviour:
         _target: {fileID: 1958079373}
         _component: QTQuestionnaireManager
         _name: BoContextSamplingRoundsForCsv
-    - headerName: speed
-      itemValue:
-        _parameterTypes: []
-        _target: {fileID: 200000}
-        _component: FittsLawTask
-        _name: QuestionnaireSpeedCsvValue
-    - headerName: accuracy
-      itemValue:
-        _parameterTypes: []
-        _target: {fileID: 200000}
-        _component: FittsLawTask
-        _name: QuestionnaireAccuracyCsvValue
     - headerName: WarmStart
       itemValue:
         _parameterTypes: []
@@ -19540,6 +19528,18 @@ MonoBehaviour:
         _target: {fileID: 1958079373}
         _component: QTQuestionnaireManager
         _name: BoContextOptimisedForCsv
+    - headerName: speed
+      itemValue:
+        _parameterTypes: []
+        _target: {fileID: 200000}
+        _component: FittsLawTask
+        _name: QuestionnaireSpeedCsvValue
+    - headerName: accuracy
+      itemValue:
+        _parameterTypes: []
+        _target: {fileID: 200000}
+        _component: FittsLawTask
+        _name: QuestionnaireAccuracyCsvValue
   pageBackgroundColor: {r: 0.9245, g: 0.9245, b: 0.9245, a: 0.9}
   pageBottomColor: {r: 0.76, g: 0.88, b: 1, a: 1}
   highlightColor: {r: 0, g: 0.67, b: 1, a: 1}
