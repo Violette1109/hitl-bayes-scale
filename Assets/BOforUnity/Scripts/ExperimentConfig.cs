@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using BOforUnity;
+using BOforUnity.Examples;
 
 public class ExperimentConfig : MonoBehaviour
 {
@@ -50,6 +51,7 @@ public class ExperimentConfig : MonoBehaviour
 
     [Header("Manager References")]
     public BoForUnityManager boManager;
+    public FittsLawConditionManager fittsLawConditionManager;
 
     private readonly Color _selectedColor = new Color(0.498f, 0.467f, 0.867f);
     private readonly Color _defaultColor  = new Color(0.9f, 0.9f, 0.9f);
@@ -228,6 +230,8 @@ public class ExperimentConfig : MonoBehaviour
         if (!string.IsNullOrEmpty(_userId))
             boManager.userId = _userId;
 
+        SyncConditionModeWithRandomAllocation();
+
         // 自動對照組 Condition ID 編碼
         if (_likertMax == 5) boManager.conditionId = "5";
         else if (_likertMax == 20) boManager.conditionId = "20";
@@ -366,5 +370,20 @@ public class ExperimentConfig : MonoBehaviour
             boManager.initialParametersDataPath = "warmstart_params.csv";
             boManager.initialObjectivesDataPath = "warmstart_objectives.csv";
         }
+    }
+
+    void SyncConditionModeWithRandomAllocation()
+    {
+        if (fittsLawConditionManager == null)
+            fittsLawConditionManager = FindObjectOfType<FittsLawConditionManager>();
+
+        if (fittsLawConditionManager == null)
+            return;
+
+        var targetMode = _randomAllocation
+            ? FittsLawConditionManager.ConditionMode.Random
+            : FittsLawConditionManager.ConditionMode.AdaptiveBo;
+
+        fittsLawConditionManager.SetConditionMode(targetMode);
     }
 }

@@ -169,6 +169,22 @@ namespace BOforUnity.Examples
             }
         }
 
+        public void SetConditionMode(ConditionMode mode, bool beginIfNeeded = true)
+        {
+            conditionMode = mode;
+            ApplyConditionConfiguration();
+
+            if (!beginIfNeeded ||
+                mode == ConditionMode.AdaptiveBo ||
+                _started ||
+                !isActiveAndEnabled)
+            {
+                return;
+            }
+
+            StartCoroutine(BeginInitialBaselineRoundAfterDelay());
+        }
+
         public void OptimizationStart()
         {
             if (conditionMode == ConditionMode.AdaptiveBo)
@@ -562,6 +578,18 @@ namespace BOforUnity.Examples
                 yield return null;
 
             _advanceQueued = false;
+            BeginNextRound();
+        }
+
+        private IEnumerator BeginInitialBaselineRoundAfterDelay()
+        {
+            yield return null;
+            if (nextRoundDelaySeconds > 0f)
+                yield return new WaitForSecondsRealtime(nextRoundDelaySeconds);
+
+            if (conditionMode == ConditionMode.AdaptiveBo || _started || _advanceQueued)
+                yield break;
+
             BeginNextRound();
         }
 
