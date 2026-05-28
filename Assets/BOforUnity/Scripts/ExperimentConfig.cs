@@ -375,9 +375,6 @@ public class ExperimentConfig : MonoBehaviour
     void SyncConditionModeWithRandomAllocation()
     {
         if (fittsLawConditionManager == null)
-            fittsLawConditionManager = FindObjectOfType<FittsLawConditionManager>();
-
-        if (fittsLawConditionManager == null)
             return;
 
         var targetMode = _randomAllocation
