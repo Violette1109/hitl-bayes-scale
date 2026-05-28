@@ -381,6 +381,6 @@ public class ExperimentConfig : MonoBehaviour
             ? FittsLawConditionManager.ConditionMode.Random
             : FittsLawConditionManager.ConditionMode.AdaptiveBo;
 
-        fittsLawConditionManager.SetConditionMode(targetMode);
+        fittsLawConditionManager.SetConditionMode(targetMode, autoStartBaselineRound: true);
     }
 }

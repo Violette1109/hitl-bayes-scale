@@ -592,11 +592,11 @@ namespace BOforUnity.Examples
 
         private bool ShouldSkipBaselineRoundStart()
         {
-            bool isAdaptiveMode = conditionMode == ConditionMode.AdaptiveBo;
+            bool isAdaptiveBoMode = conditionMode == ConditionMode.AdaptiveBo;
             bool conditionAlreadyStarted = _started;
             bool roundAdvanceAlreadyQueued = _advanceQueued;
             bool managerInactive = !isActiveAndEnabled;
-            return isAdaptiveMode || conditionAlreadyStarted || roundAdvanceAlreadyQueued || managerInactive;
+            return isAdaptiveBoMode || conditionAlreadyStarted || roundAdvanceAlreadyQueued || managerInactive;
         }
 
         private void BeginNextRound()
