@@ -395,12 +395,9 @@ public class ExperimentConfig : MonoBehaviour
         }
     }
 
-    bool ShouldUseRandomCondition()
-    {
-        return _randomAllocation;
-    }
+    private bool ShouldUseRandomCondition => _randomAllocation;
 
-    FittsLawConditionManager ResolveFittsLawConditionManager()
+    private FittsLawConditionManager ResolveFittsLawConditionManager()
     {
         if (_fittsLawConditionManager == null)
             _fittsLawConditionManager = FindObjectOfType<FittsLawConditionManager>();
