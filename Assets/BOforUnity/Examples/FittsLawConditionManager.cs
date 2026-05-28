@@ -46,6 +46,7 @@ namespace BOforUnity.Examples
         private int _totalRoundCount;
         private bool _started;
         private bool _advanceQueued;
+        private bool _initialBaselineRoundQueued;
         private bool _runtimeUserFolderReserved;
 
         public bool UsesExternalIterationSignal
@@ -179,6 +180,10 @@ namespace BOforUnity.Examples
                 return;
             }
 
+            if (_initialBaselineRoundQueued)
+                return;
+
+            _initialBaselineRoundQueued = true;
             StartCoroutine(BeginInitialBaselineRoundAfterDelay());
         }
 
@@ -584,6 +589,7 @@ namespace BOforUnity.Examples
             if (nextRoundDelaySeconds > 0f)
                 yield return new WaitForSecondsRealtime(nextRoundDelaySeconds);
 
+            _initialBaselineRoundQueued = false;
             if (ShouldSkipBaselineRoundStart())
                 yield break;
 
