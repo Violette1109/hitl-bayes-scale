@@ -1224,7 +1224,9 @@ namespace BOforUnity
             userId = LogDataFolderUtility.GetOrCreateUserFolderTokenForCondition(
                 LogDataFolderUtility.StreamingAssetsLogRoot,
                 requestedUserId,
-                conditionId
+                conditionId,
+                allowExistingRequestedUserFolder: true,
+                allowExistingConditionFolder: false
             );
             _runtimeUserFolderReserved = true;
 

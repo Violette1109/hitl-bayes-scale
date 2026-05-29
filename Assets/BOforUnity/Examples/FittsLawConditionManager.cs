@@ -194,6 +194,9 @@ namespace BOforUnity.Examples
         {
             if (conditionMode == ConditionMode.AdaptiveBo || _started || _advanceQueued)
                 return;
+            
+            // 🟢 核心修正：允許在正式啟動時重新鎖定正確的 User ID 資料夾
+            _runtimeUserFolderReserved = false;
 
             _advanceQueued = true;
             StartCoroutine(BeginNextRoundAfterDelay());
@@ -603,8 +606,12 @@ namespace BOforUnity.Examples
 
             string phase = GetPhaseForRound(_currentRound);
             BoForUnityManager source = ResolveIterationSettingsSource();
-            if (source != null)
-                source.currentIteration = _currentRound;
+            if (source != null && !string.IsNullOrEmpty(source.userId) && source.userId != "-1")
+            {
+                this.userId = source.userId;
+            }
+            RefreshIterationCounts();
+            SyncContextToReferencedComponents();
 
             if (fittsLawTask == null)
             {

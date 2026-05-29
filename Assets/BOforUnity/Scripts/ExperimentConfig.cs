@@ -264,6 +264,30 @@ public class ExperimentConfig : MonoBehaviour
         {
             try
             {
+                var userIdField = conditionManager.GetType().GetField("userId");
+                if (userIdField != null && !string.IsNullOrEmpty(boManager.userId))
+                {
+                    userIdField.SetValue(conditionManager, boManager.userId);
+                }
+
+                var conditionIdField = conditionManager.GetType().GetField("conditionId");
+                if (conditionIdField != null)
+                {
+                    conditionIdField.SetValue(conditionManager, _likertMax.ToString());
+                }
+
+                var groupIdField = conditionManager.GetType().GetField("groupId");
+                if (groupIdField != null)
+                {
+                    groupIdField.SetValue(conditionManager, _randomAllocation ? "random" : _samplingRounds.ToString());
+                }
+
+                var setConditionIdFromModeField = conditionManager.GetType().GetField("setConditionIdFromMode");
+                if (setConditionIdFromModeField != null)
+                {
+                    setConditionIdFromModeField.SetValue(conditionManager, false);
+                }
+
                 var method = conditionManager.GetType().GetMethod("SetConditionMode");
                 if (method != null)
                 {
@@ -283,13 +307,10 @@ public class ExperimentConfig : MonoBehaviour
         }
 
         // 自動對照組 Condition ID 編碼
-        if (_likertMax == 5) boManager.conditionId = "5";
-        else if (_likertMax == 20) boManager.conditionId = "20";
-        else if (_likertMax == 100) boManager.conditionId = "100";
+        boManager.conditionId = _likertMax.ToString();
 
-        // 自動對照組 Group ID 編碼
-        if (_samplingRounds == 10) boManager.groupId = "10";
-        else if (_samplingRounds == 15) boManager.groupId = "15";
+        // Group ID follows sampling rounds unless random allocation is enabled.
+        boManager.groupId = _randomAllocation ? "random" : _samplingRounds.ToString();
 
         UnityEngine.Debug.Log(
             $"[ApplyConfig] UserID={_userId}, ConditionID={boManager.conditionId}, GroupID={boManager.groupId}, RandomAllocation={_randomAllocation}"
@@ -403,7 +424,7 @@ public class ExperimentConfig : MonoBehaviour
 
         boManager.warmStart = _warmStart;
         boManager.questionnaireScaleForCsv = _likertMax.ToString();
-        boManager.questionnaireSamplingRoundsForCsv = _samplingRounds.ToString();
+        boManager.questionnaireSamplingRoundsForCsv = boManager.groupId;
         boManager.questionnaireRandomForCsv = _randomAllocation;
         boManager.questionnaireOptimisedForCsv = _optimized;
 
