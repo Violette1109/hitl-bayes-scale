@@ -119,13 +119,21 @@ public class ExperimentConfig : MonoBehaviour
         rounds10Btn.onClick.AddListener(() => {
             if (_randomAllocation) return;
             SetRounds(10); 
-            HighlightRounds(rounds10Btn); 
+            HighlightRounds(rounds10Btn);
+            boManager.numSamplingIterations = 0;
+            boManager.numOptimizationIterations = 5;
+            boManager.enableFinalDesignRound = true;
+            UpdateBaselineDataPaths();
         });
         
         rounds15Btn.onClick.AddListener(() => {
             if (_randomAllocation) return;
             SetRounds(15); 
-            HighlightRounds(rounds15Btn); 
+            HighlightRounds(rounds15Btn);
+            boManager.numSamplingIterations = 5;
+            boManager.numOptimizationIterations = 0;
+            boManager.enableFinalDesignRound = true;
+            UpdateBaselineDataPaths();
         });
         
         warmStartToggle.onValueChanged.AddListener(val => _warmStart = val);
@@ -159,6 +167,8 @@ public class ExperimentConfig : MonoBehaviour
 
         Debug.Log($"[ExperimentConfig] User ID 已設定為原始字串：'{_userId}'");
 
+        UpdateBaselineDataPaths();
+
         userIdPanel.SetActive(false);
         configPanel.SetActive(true);
     }
@@ -168,10 +178,41 @@ public class ExperimentConfig : MonoBehaviour
         _randomAllocation = isOn;
         if (isOn)
         {
-            _samplingRounds = 15;
+            _samplingRounds = 5;
             HighlightRounds(rounds15Btn);
             rounds10Btn.interactable = false;
             rounds15Btn.interactable = false;
+
+            boManager.numSamplingIterations = 5;
+            boManager.numOptimizationIterations = 0;
+            boManager.enableFinalDesignRound = false;
+
+            // Do NOT load baseline data for random mode
+            boManager.initialParametersDataPath = "";
+            boManager.initialObjectivesDataPath = "";
+
+            // Set conditionMode = Random on FittsLawConditionManager via reflection
+            var conditionManager = ResolveFittsLawConditionManager();
+            if (conditionManager != null)
+            {
+                try
+                {
+                    var enumType = conditionManager.GetType().GetNestedType("ConditionMode");
+                    if (enumType != null)
+                    {
+                        var method = conditionManager.GetType().GetMethod("SetConditionMode");
+                        if (method != null)
+                        {
+                            var enumValue = System.Enum.Parse(enumType, "Random");
+                            method.Invoke(conditionManager, new object[] { enumValue });
+                        }
+                    }
+                }
+                catch (System.Exception ex)
+                {
+                    Debug.LogWarning($"[ExperimentConfig] 設定 Random ConditionMode 失敗: {ex.Message}");
+                }
+            }
         }
         else
         {
@@ -179,10 +220,21 @@ public class ExperimentConfig : MonoBehaviour
             rounds15Btn.interactable = true;
             _samplingRounds = 10;
             HighlightRounds(rounds10Btn);
+
+            // Restore default for Round10 mode
+            boManager.numSamplingIterations = 0;
+            boManager.numOptimizationIterations = 5;
+            boManager.enableFinalDesignRound = true;
+            UpdateBaselineDataPaths();
         }
     }
 
-    void SetScale(int val)          { _likertMax      = val; }
+    void SetScale(int val)
+    {
+        _likertMax = val;
+        UpdateBaselineDataPaths();
+    }
+
     void SetRounds(int samplingVal) { _samplingRounds = samplingVal; }
 
     void HighlightScale(Button selected)
@@ -411,15 +463,27 @@ public class ExperimentConfig : MonoBehaviour
         // =========================================
         if (_randomAllocation)
         {
-            boManager.numSamplingIterations = 15;
+            boManager.numSamplingIterations = 5;
             boManager.numOptimizationIterations = 0;
             boManager.enableFinalDesignRound = false;
+            // Do NOT load baseline data for random mode
+            boManager.initialParametersDataPath = "";
+            boManager.initialObjectivesDataPath = "";
+        }
+        else if (_samplingRounds == 15)
+        {
+            boManager.numSamplingIterations = 5;
+            boManager.numOptimizationIterations = 0;
+            boManager.enableFinalDesignRound = true;
+            UpdateBaselineDataPaths();
         }
         else
         {
-            boManager.numSamplingIterations = _samplingRounds;
-            boManager.numOptimizationIterations = (_samplingRounds == 15) ? optimizationRoundsFor15 : optimizationRoundsFor10;
+            // Round10 mode: 0 sampling + 5 optimization + final design
+            boManager.numSamplingIterations = 0;
+            boManager.numOptimizationIterations = 5;
             boManager.enableFinalDesignRound = true;
+            UpdateBaselineDataPaths();
         }
 
         boManager.warmStart = _warmStart;
@@ -432,6 +496,9 @@ public class ExperimentConfig : MonoBehaviour
             ? boManager.numOptimizationIterations
             : boManager.numSamplingIterations + boManager.numOptimizationIterations;
 
+        if (boManager.enableFinalDesignRound)
+            boManager.totalIterations += 1;
+
         if (_warmStart)
         {
             boManager.initialParametersDataPath = "warmstart_params.csv";
@@ -440,6 +507,21 @@ public class ExperimentConfig : MonoBehaviour
     }
 
     private bool ShouldUseRandomCondition => _randomAllocation;
+
+    /// <summary>
+    /// Sets boManager.initialParametersDataPath and initialObjectivesDataPath
+    /// based on the current _userId and _likertMax.
+    /// Called whenever scale is changed or user ID is confirmed.
+    /// </summary>
+    private void UpdateBaselineDataPaths()
+    {
+        if (string.IsNullOrEmpty(_userId)) return;
+
+        boManager.initialParametersDataPath = $"{_userId}/baseline_{_likertMax}_params.csv";
+        boManager.initialObjectivesDataPath = $"{_userId}/baseline_{_likertMax}_objectives.csv";
+
+        Debug.Log($"[ExperimentConfig] Baseline paths updated: {boManager.initialParametersDataPath}, {boManager.initialObjectivesDataPath}");
+    }
 
     private MonoBehaviour ResolveFittsLawConditionManager()
     {
