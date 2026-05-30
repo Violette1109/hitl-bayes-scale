@@ -185,7 +185,7 @@ public class ExperimentConfig : MonoBehaviour
 
             boManager.numSamplingIterations = 5;
             boManager.numOptimizationIterations = 0;
-            boManager.enableFinalDesignRound = false;
+            boManager.enableFinalDesignRound = true;
 
             // Load baseline data so the final design selection uses all 15 rounds
             UpdateBaselineDataPaths();
@@ -464,7 +464,7 @@ public class ExperimentConfig : MonoBehaviour
         {
             boManager.numSamplingIterations = 5;
             boManager.numOptimizationIterations = 0;
-            boManager.enableFinalDesignRound = false;
+            boManager.enableFinalDesignRound = true;
             // Load baseline data so the final design selection uses all 15 rounds
             UpdateBaselineDataPaths();
         }
