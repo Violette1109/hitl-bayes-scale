@@ -187,9 +187,8 @@ public class ExperimentConfig : MonoBehaviour
             boManager.numOptimizationIterations = 0;
             boManager.enableFinalDesignRound = false;
 
-            // Do NOT load baseline data for random mode
-            boManager.initialParametersDataPath = "";
-            boManager.initialObjectivesDataPath = "";
+            // Load baseline data so the final design selection uses all 15 rounds
+            UpdateBaselineDataPaths();
 
             // Set conditionMode = Random on FittsLawConditionManager via reflection
             var conditionManager = ResolveFittsLawConditionManager();
@@ -466,9 +465,8 @@ public class ExperimentConfig : MonoBehaviour
             boManager.numSamplingIterations = 5;
             boManager.numOptimizationIterations = 0;
             boManager.enableFinalDesignRound = false;
-            // Do NOT load baseline data for random mode
-            boManager.initialParametersDataPath = "";
-            boManager.initialObjectivesDataPath = "";
+            // Load baseline data so the final design selection uses all 15 rounds
+            UpdateBaselineDataPaths();
         }
         else if (_samplingRounds == 15)
         {
