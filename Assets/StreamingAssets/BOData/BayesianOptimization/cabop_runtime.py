@@ -20,6 +20,7 @@ PROBLEM_DIM = None
 NUM_OBJS = None
 
 WARM_START = False
+USE_INITIAL_DATA_AS_PRIOR = False
 RANDOM_ALLOCATION = False
 OPTIMIZED_INTRODUCTION = True
 CSV_PATH_PARAMETERS = ""
@@ -761,15 +762,29 @@ def evaluate_design(conn, x_realized):
     return float(scalarized), raw_values
 
 
-def boot_optimizer_with_warm_start(optimizer):
-    if not WARM_START:
+def boot_optimizer_with_warm_start(optimizer, x_raw=None, y_raw=None):
+    if not (WARM_START or USE_INITIAL_DATA_AS_PRIOR):
         return
 
-    x_raw, y_raw = load_warm_start_raw()
+    if x_raw is None or y_raw is None:
+        x_raw, y_raw = load_warm_start_raw()
+
     for i in range(x_raw.shape[0]):
         x = x_raw[i]
         y_scalar = scalarize_objectives(y_raw[i].tolist())
         optimizer.tell(x, float(y_scalar), x, update_rule="actual")
+
+
+def append_prior_observation_rows(x_raw, y_raw):
+    for i in range(x_raw.shape[0]):
+        scalarized = scalarize_objectives(y_raw[i].tolist())
+        append_observation_row(
+            i + 1,
+            "baseline",
+            scalarized,
+            y_raw[i].tolist(),
+            x_raw[i],
+        )
 
 
 def run_cabop(conn):
@@ -796,10 +811,17 @@ def run_cabop(conn):
 
     prefab = build_prefab_dict()
 
-    # Seed optimizer from warm-start CSV data.
-    boot_optimizer_with_warm_start(optimizer)
+    prior_x_raw = None
+    prior_y_raw = None
+    if WARM_START or USE_INITIAL_DATA_AS_PRIOR:
+        prior_x_raw, prior_y_raw = load_warm_start_raw()
+        append_prior_observation_rows(prior_x_raw, prior_y_raw)
+    prior_count = int(prior_x_raw.shape[0]) if prior_x_raw is not None else 0
 
-    planned_evaluations = int(N_ITERATIONS if WARM_START else (N_INITIAL + N_ITERATIONS))
+    # Seed optimizer from warm-start/prior CSV data.
+    boot_optimizer_with_warm_start(optimizer, prior_x_raw, prior_y_raw)
+
+    planned_evaluations = int(N_INITIAL + N_ITERATIONS)
     planned_evaluations = max(0, planned_evaluations)
 
     cumulative_cost = 0.0
@@ -833,8 +855,9 @@ def run_cabop(conn):
         # 1.0 means best possible according to scalarized minimization objective.
         coverage = float(np.clip(1.0 - best_scalarized, -1e9, 1.0)) if np.isfinite(best_scalarized) else 0.0
 
-        absolute_iteration = iteration + 1
-        phase = "sampling" if (not WARM_START and absolute_iteration <= N_INITIAL) else "optimization"
+        evaluation_iteration = iteration + 1
+        absolute_iteration = prior_count + evaluation_iteration
+        phase = "sampling" if evaluation_iteration <= N_INITIAL else "optimization"
 
         append_execution_time(absolute_iteration, elapsed)
         append_observation_row(absolute_iteration, phase, scalarized, objective_raw, x_realized)
@@ -846,7 +869,7 @@ def run_cabop(conn):
             conn,
             {
                 "type": "tempCoverage",
-                "value": float(absolute_iteration) / float(max(1, planned_evaluations)),
+                "value": float(evaluation_iteration) / float(max(1, planned_evaluations)),
             },
         )
 
@@ -861,7 +884,7 @@ def parse_init_and_validate(init_msg, forced_mode):
     global USER_ID, CONDITION_ID, GROUP_ID, USER_LOG_ID, CONDITION_LOG_ID
     global OPTIMIZER_BACKEND, CABOP_MODE, CABOP_USE_COST_AWARE
     global CABOP_UPDATE_RULE, CABOP_ENABLE_COST_BUDGET, CABOP_MAX_CUMULATIVE_COST
-    global WARM_START, WARM_START_OBJECTIVE_FORMAT
+    global WARM_START, USE_INITIAL_DATA_AS_PRIOR, WARM_START_OBJECTIVE_FORMAT
 
     cfg = init_msg.get("config", {}) or {}
 
@@ -872,6 +895,7 @@ def parse_init_and_validate(init_msg, forced_mode):
     NUM_OBJS = get_cfg_int(cfg, "nObjectives", required=True)
 
     WARM_START = get_cfg_bool(cfg, "warmStart", default=False)
+    USE_INITIAL_DATA_AS_PRIOR = get_cfg_bool(cfg, "useInitialDataAsPrior", default=False)
     RANDOM_ALLOCATION = get_cfg_bool(cfg, "random", default=False)
     OPTIMIZED_INTRODUCTION = get_cfg_bool(cfg, "optimizedIntroduction", default=True)
     CSV_PATH_PARAMETERS = str(cfg.get("initialParametersDataPath") or "")

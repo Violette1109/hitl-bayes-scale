@@ -2,6 +2,8 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using BOforUnity;
+using BOforUnity.Scripts;
+using QuestionnaireToolkit.Scripts;
 
 public class ExperimentConfig : MonoBehaviour
 {
@@ -54,6 +56,9 @@ public class ExperimentConfig : MonoBehaviour
     // 🟢 已改成通用的 MonoBehaviour 防止編譯紅字
     private MonoBehaviour _fittsLawConditionManager;
 
+    private const int BaselineRoundsPerScale = 10;
+    private static readonly int[] BaselineScales = { 5, 20, 100 };
+
     private readonly Color _selectedColor = new Color(0.498f, 0.467f, 0.867f);
     private readonly Color _defaultColor  = new Color(0.9f, 0.9f, 0.9f);
 
@@ -64,6 +69,10 @@ public class ExperimentConfig : MonoBehaviour
     private static bool   _optimized         = false;
     private static bool   _experimentStarted = false;
     private static string _userId            = ""; 
+    private static bool   _baselinePhaseStarted = false;
+    private static bool   _baselinePhaseCompleted = false;
+    private static int[]  _baselineScaleOrder = new int[0];
+    private static int    _baselineScaleIndex = 0;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     static void ResetStatics()
@@ -75,6 +84,10 @@ public class ExperimentConfig : MonoBehaviour
         _optimized         = false;
         _experimentStarted = false;
         _userId            = ""; 
+        _baselinePhaseStarted = false;
+        _baselinePhaseCompleted = false;
+        _baselineScaleOrder = new int[0];
+        _baselineScaleIndex = 0;
     }
 
     // ─────────────────────────────────────────────
@@ -84,8 +97,8 @@ public class ExperimentConfig : MonoBehaviour
     {
         if (!_experimentStarted)
         {
-            userIdPanel.SetActive(true);
-            configPanel.SetActive(false);
+            userIdPanel.SetActive(!_baselinePhaseStarted && !_baselinePhaseCompleted);
+            configPanel.SetActive(_baselinePhaseCompleted);
             boManager.welcomePanel.SetActive(false);
             boManager.nextButton.SetActive(false);
 
@@ -120,20 +133,14 @@ public class ExperimentConfig : MonoBehaviour
             if (_randomAllocation) return;
             SetRounds(10); 
             HighlightRounds(rounds10Btn);
-            boManager.numSamplingIterations = 0;
-            boManager.numOptimizationIterations = 5;
-            boManager.enableFinalDesignRound = true;
-            UpdateBaselineDataPaths();
+            ConfigureRound10Mode();
         });
         
         rounds15Btn.onClick.AddListener(() => {
             if (_randomAllocation) return;
             SetRounds(15); 
             HighlightRounds(rounds15Btn);
-            boManager.numSamplingIterations = 5;
-            boManager.numOptimizationIterations = 0;
-            boManager.enableFinalDesignRound = true;
-            UpdateBaselineDataPaths();
+            ConfigureRound15Mode();
         });
         
         warmStartToggle.onValueChanged.AddListener(val => _warmStart = val);
@@ -149,7 +156,19 @@ public class ExperimentConfig : MonoBehaviour
         _optimized = optimizedToggle != null && optimizedToggle.isOn;
 
         HighlightScale(scale5Btn);
-        HighlightRounds(rounds10Btn);
+        if (_randomAllocation)
+        {
+            HighlightRounds(rounds15Btn);
+            rounds10Btn.interactable = false;
+            rounds15Btn.interactable = false;
+            ConfigureRandomMode();
+            SetConditionManagerMode("Random");
+        }
+        else
+        {
+            HighlightRounds(rounds10Btn);
+            ConfigureRound10Mode();
+        }
     }
 
     void OnUserIdContinueClicked()
@@ -169,8 +188,10 @@ public class ExperimentConfig : MonoBehaviour
 
         UpdateBaselineDataPaths();
 
-        userIdPanel.SetActive(false);
-        configPanel.SetActive(true);
+        if (_baselinePhaseCompleted)
+            ShowPhase2ConfigPanel();
+        else
+            StartBaselinePhase();
     }
 
     void OnRandomAllocationChanged(bool isOn)
@@ -183,58 +204,80 @@ public class ExperimentConfig : MonoBehaviour
             rounds10Btn.interactable = false;
             rounds15Btn.interactable = false;
 
-            boManager.numSamplingIterations = 5;
-            boManager.numOptimizationIterations = 0;
-            boManager.enableFinalDesignRound = true;
-
-            // Load baseline data so the final design selection uses all 15 rounds
-            UpdateBaselineDataPaths();
-
-            // Set conditionMode = Random on FittsLawConditionManager via reflection
-            var conditionManager = ResolveFittsLawConditionManager();
-            if (conditionManager != null)
-            {
-                try
-                {
-                    var enumType = conditionManager.GetType().GetNestedType("ConditionMode");
-                    if (enumType != null)
-                    {
-                        var method = conditionManager.GetType().GetMethod("SetConditionMode");
-                        if (method != null)
-                        {
-                            var enumValue = System.Enum.Parse(enumType, "Random");
-                            method.Invoke(conditionManager, new object[] { enumValue });
-                        }
-                    }
-                }
-                catch (System.Exception ex)
-                {
-                    Debug.LogWarning($"[ExperimentConfig] 設定 Random ConditionMode 失敗: {ex.Message}");
-                }
-            }
+            ConfigureRandomMode();
+            SetConditionManagerMode("Random");
         }
         else
         {
+            EnableBoRuntimeComponentsForConfig();
             rounds10Btn.interactable = true;
             rounds15Btn.interactable = true;
             _samplingRounds = 10;
             HighlightRounds(rounds10Btn);
 
             // Restore default for Round10 mode
-            boManager.numSamplingIterations = 0;
-            boManager.numOptimizationIterations = 5;
-            boManager.enableFinalDesignRound = true;
-            UpdateBaselineDataPaths();
+            ConfigureRound10Mode();
+            SetConditionManagerMode("AdaptiveBo");
         }
     }
 
     void SetScale(int val)
     {
         _likertMax = val;
+        ApplyLikertScaleConfiguration();
         UpdateBaselineDataPaths();
+        if (_randomAllocation)
+            ClearBaselineDataPaths();
     }
 
     void SetRounds(int samplingVal) { _samplingRounds = samplingVal; }
+
+    private void ConfigureRound10Mode()
+    {
+        boManager.numSamplingIterations = 0;
+        boManager.numOptimizationIterations = Mathf.Max(0, optimizationRoundsFor10);
+        boManager.enableFinalDesignRound = true;
+        boManager.warmStart = true;
+        boManager.useInitialDataAsPrior = true;
+        _warmStart = true;
+        SetWarmStartToggleSilently(true);
+        UpdateBaselineDataPaths();
+        SyncConditionManagerFinalDesignRound();
+    }
+
+    private void ConfigureRound15Mode()
+    {
+        boManager.numSamplingIterations = 5;
+        boManager.numOptimizationIterations = Mathf.Max(0, optimizationRoundsFor15);
+        boManager.enableFinalDesignRound = true;
+        boManager.warmStart = false;
+        boManager.useInitialDataAsPrior = true;
+        _warmStart = false;
+        SetWarmStartToggleSilently(false);
+        UpdateBaselineDataPaths();
+        SyncConditionManagerFinalDesignRound();
+    }
+
+    private void ConfigureRandomMode()
+    {
+        boManager.numSamplingIterations = 5;
+        boManager.numOptimizationIterations = 0;
+        boManager.enableFinalDesignRound = false;
+        boManager.warmStart = false;
+        boManager.useInitialDataAsPrior = false;
+        _warmStart = false;
+        SetWarmStartToggleSilently(false);
+        ClearBaselineDataPaths();
+        SyncConditionManagerFinalDesignRound();
+    }
+
+    private void SetWarmStartToggleSilently(bool isOn)
+    {
+        if (warmStartToggle == null)
+            return;
+
+        warmStartToggle.SetIsOnWithoutNotify(isOn);
+    }
 
     void HighlightScale(Button selected)
     {
@@ -262,6 +305,9 @@ public class ExperimentConfig : MonoBehaviour
     void OnStartClicked()
     {
         _experimentStarted = true;
+        if (!ShouldUseRandomCondition)
+            EnableBoRuntimeComponentsForConfig();
+
         ApplyConfig();
 
         if (ShouldUseRandomCondition)
@@ -339,6 +385,12 @@ public class ExperimentConfig : MonoBehaviour
                     setConditionIdFromModeField.SetValue(conditionManager, false);
                 }
 
+                var readIterationsFromSourceField = conditionManager.GetType().GetField("readIterationsFromSource");
+                if (readIterationsFromSourceField != null)
+                {
+                    readIterationsFromSourceField.SetValue(conditionManager, true);
+                }
+
                 var method = conditionManager.GetType().GetMethod("SetConditionMode");
                 if (method != null)
                 {
@@ -367,61 +419,7 @@ public class ExperimentConfig : MonoBehaviour
             $"[ApplyConfig] UserID={_userId}, ConditionID={boManager.conditionId}, GroupID={boManager.groupId}, RandomAllocation={_randomAllocation}"
         );
 
-        // ─────────────────────────────────────────────
-        // 動態調整問卷 Slider 上限 ＆ 精準鎖定分數 Placeholder
-        // ─────────────────────────────────────────────
-        int updatedSlidersCount = 0;
-        Slider[] allSliders = Resources.FindObjectsOfTypeAll<Slider>();
-        foreach (var s in allSliders)
-        {
-            if (s.gameObject.name == "SliderBar" || s.gameObject.activeInHierarchy)
-            {
-                // 1. 設定滑桿基本邊界
-                s.minValue = 1;
-                s.maxValue = _likertMax;
-                s.wholeNumbers = true;
-
-                // 🟢 2. 【精準狙擊】只去尋找名字叫 "score" 的那個中央數值顯示組件
-                TextMeshProUGUI[] textComponents = s.gameObject.GetComponentsInChildren<TextMeshProUGUI>(true);
-                foreach (var txt in textComponents)
-                {
-                    if (txt != null && (txt.gameObject.name.Equals("score", System.StringComparison.OrdinalIgnoreCase) || 
-                                        txt.gameObject.name.Contains("Score")))
-                    {
-                        txt.text = "score";
-                    }
-                }
-
-                // 備用防禦：舊版 UI Text 相同邏輯精準鎖定
-                Text[] oldTexts = s.gameObject.GetComponentsInChildren<Text>(true);
-                foreach (var txt in oldTexts)
-                {
-                    if (txt != null && (txt.gameObject.name.Equals("score", System.StringComparison.OrdinalIgnoreCase) || 
-                                        txt.gameObject.name.Contains("Score")))
-                    {
-                        txt.text = "score";
-                    }
-                }
-
-                var containerCanvas = s.GetComponentInParent<Canvas>();
-                if (containerCanvas != null)
-                {
-                    Canvas.ForceUpdateCanvases();
-                }
-                
-                updatedSlidersCount++;
-            }
-        }
-
-        // 遍歷 Objectives，同步改寫問卷後台數據邊界
-        foreach (var obj in boManager.objectives)
-        {
-            if (obj.key == "aesthetics" || obj.key == "usability")
-            {
-                obj.value.lowerBound = 1;         
-                obj.value.upperBound = _likertMax;  
-            }
-        }
+        ApplyLikertScaleConfiguration();
 
         // ==========================================================
         // 🟢 【雙勾勾動態連動】控制 FittsLawTask 內部隨機開關與隨機種子固定開關
@@ -462,49 +460,278 @@ public class ExperimentConfig : MonoBehaviour
         // =========================================
         if (_randomAllocation)
         {
-            boManager.numSamplingIterations = 5;
-            boManager.numOptimizationIterations = 0;
-            boManager.enableFinalDesignRound = true;
-            // Load baseline data so the final design selection uses all 15 rounds
-            UpdateBaselineDataPaths();
+            ConfigureRandomMode();
         }
         else if (_samplingRounds == 15)
         {
-            boManager.numSamplingIterations = 5;
-            boManager.numOptimizationIterations = 0;
-            boManager.enableFinalDesignRound = true;
-            UpdateBaselineDataPaths();
+            ConfigureRound15Mode();
         }
         else
         {
             // Round10 mode: 0 sampling + 5 optimization + final design
-            boManager.numSamplingIterations = 0;
-            boManager.numOptimizationIterations = 5;
-            boManager.enableFinalDesignRound = true;
-            UpdateBaselineDataPaths();
+            ConfigureRound10Mode();
         }
 
-        boManager.warmStart = _warmStart;
         boManager.questionnaireScaleForCsv = _likertMax.ToString();
         boManager.questionnaireSamplingRoundsForCsv = boManager.groupId;
         boManager.questionnaireRandomForCsv = _randomAllocation;
         boManager.questionnaireOptimisedForCsv = _optimized;
 
-        boManager.totalIterations = _warmStart
-            ? boManager.numOptimizationIterations
-            : boManager.numSamplingIterations + boManager.numOptimizationIterations;
-
-        if (boManager.enableFinalDesignRound)
-            boManager.totalIterations += 1;
-
-        if (_warmStart)
-        {
-            boManager.initialParametersDataPath = "warmstart_params.csv";
-            boManager.initialObjectivesDataPath = "warmstart_objectives.csv";
-        }
+        boManager.totalIterations = boManager.numSamplingIterations + boManager.numOptimizationIterations;
     }
 
     private bool ShouldUseRandomCondition => _randomAllocation;
+
+    private void StartBaselinePhase()
+    {
+        _baselinePhaseStarted = true;
+        _baselinePhaseCompleted = false;
+        _baselineScaleIndex = 0;
+        _baselineScaleOrder = CreateShuffledBaselineScaleOrder();
+
+        userIdPanel.SetActive(false);
+        configPanel.SetActive(false);
+        if (boManager.welcomePanel != null)
+            boManager.welcomePanel.SetActive(false);
+        if (boManager.nextButton != null)
+            boManager.nextButton.SetActive(false);
+        if (boManager.pythonStarter != null)
+            boManager.pythonStarter.enabled = false;
+
+        Debug.Log("[ExperimentConfig] Starting baseline phase with scale order: " + FormatScaleOrder(_baselineScaleOrder));
+        StartNextBaselineBlock();
+    }
+
+    private void StartNextBaselineBlock()
+    {
+        if (_baselineScaleOrder == null || _baselineScaleOrder.Length == 0)
+            _baselineScaleOrder = CreateShuffledBaselineScaleOrder();
+
+        if (_baselineScaleIndex >= _baselineScaleOrder.Length)
+        {
+            CompleteBaselinePhase();
+            return;
+        }
+
+        int scale = _baselineScaleOrder[_baselineScaleIndex];
+        _likertMax = scale;
+        _samplingRounds = BaselineRoundsPerScale;
+        ApplyLikertScaleConfiguration();
+        UpdateBaselineDataPaths();
+
+        boManager.userId = _userId;
+        boManager.conditionId = scale.ToString();
+        boManager.groupId = "baseline";
+        boManager.numSamplingIterations = BaselineRoundsPerScale;
+        boManager.numOptimizationIterations = 0;
+        boManager.totalIterations = BaselineRoundsPerScale;
+        boManager.enableFinalDesignRound = false;
+        boManager.warmStart = false;
+        boManager.useInitialDataAsPrior = false;
+        boManager.questionnaireScaleForCsv = scale.ToString();
+        boManager.questionnaireSamplingRoundsForCsv = "baseline";
+        boManager.questionnaireRandomForCsv = true;
+        boManager.questionnaireOptimisedForCsv = false;
+
+        var conditionManager = ResolveFittsLawConditionManager();
+        if (conditionManager == null)
+        {
+            Debug.LogError("[ExperimentConfig] Cannot start baseline block because FittsLawConditionManager was not found.");
+            return;
+        }
+
+        try
+        {
+            var configureMethod = conditionManager.GetType().GetMethod(
+                "ConfigureBaselineBlock",
+                System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+            var startMethod = conditionManager.GetType().GetMethod(
+                "StartConfiguredCondition",
+                System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+
+            if (configureMethod == null || startMethod == null)
+            {
+                Debug.LogError("[ExperimentConfig] FittsLawConditionManager is missing baseline phase methods.");
+                return;
+            }
+
+            configureMethod.Invoke(conditionManager, new object[] { _userId, scale, BaselineRoundsPerScale });
+            startMethod.Invoke(conditionManager, null);
+            Debug.Log($"[ExperimentConfig] Baseline block started: UserID={_userId}, Scale={scale}, Rounds={BaselineRoundsPerScale}");
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogError($"[ExperimentConfig] Failed to start baseline block: {ex.Message}");
+        }
+    }
+
+    public void OnBaselineBlockCompleted(int completedScale)
+    {
+        if (!_baselinePhaseStarted || _baselinePhaseCompleted)
+            return;
+
+        if (_baselineScaleOrder != null &&
+            _baselineScaleIndex < _baselineScaleOrder.Length &&
+            _baselineScaleOrder[_baselineScaleIndex] != completedScale)
+        {
+            Debug.LogWarning(
+                $"[ExperimentConfig] Baseline completion scale mismatch. Expected {_baselineScaleOrder[_baselineScaleIndex]}, got {completedScale}."
+            );
+        }
+
+        _baselineScaleIndex++;
+        StartNextBaselineBlock();
+    }
+
+    private void CompleteBaselinePhase()
+    {
+        _baselinePhaseStarted = false;
+        _baselinePhaseCompleted = true;
+        _baselineScaleIndex = 0;
+
+        Debug.Log("[ExperimentConfig] Baseline phase completed. Showing Phase 2 config panel.");
+        ShowPhase2ConfigPanel();
+    }
+
+    private void ShowPhase2ConfigPanel()
+    {
+        EnableBoRuntimeComponentsForConfig();
+
+        _likertMax = 5;
+        _samplingRounds = 10;
+        _randomAllocation = false;
+        _warmStart = true;
+        _optimized = optimizedToggle != null && optimizedToggle.isOn;
+
+        if (randomAllocationToggle != null)
+            randomAllocationToggle.SetIsOnWithoutNotify(false);
+
+        if (rounds10Btn != null)
+            rounds10Btn.interactable = true;
+        if (rounds15Btn != null)
+            rounds15Btn.interactable = true;
+
+        HighlightScale(scale5Btn);
+        HighlightRounds(rounds10Btn);
+        SetConditionManagerMode("AdaptiveBo");
+        ConfigureRound10Mode();
+        ApplyLikertScaleConfiguration();
+
+        userIdPanel.SetActive(false);
+        configPanel.SetActive(true);
+        if (boManager.welcomePanel != null)
+            boManager.welcomePanel.SetActive(false);
+        if (boManager.nextButton != null)
+            boManager.nextButton.SetActive(false);
+        if (boManager.pythonStarter != null)
+            boManager.pythonStarter.enabled = false;
+    }
+
+    private static int[] CreateShuffledBaselineScaleOrder()
+    {
+        int[] order = (int[])BaselineScales.Clone();
+        for (int i = order.Length - 1; i > 0; i--)
+        {
+            int j = UnityEngine.Random.Range(0, i + 1);
+            int tmp = order[i];
+            order[i] = order[j];
+            order[j] = tmp;
+        }
+
+        return order;
+    }
+
+    private static string FormatScaleOrder(int[] order)
+    {
+        if (order == null || order.Length == 0)
+            return "";
+
+        string[] values = new string[order.Length];
+        for (int i = 0; i < order.Length; i++)
+            values[i] = order[i].ToString();
+
+        return string.Join(", ", values);
+    }
+
+    private void ApplyLikertScaleConfiguration()
+    {
+        if (boManager == null)
+            return;
+
+        Slider[] allSliders = Resources.FindObjectsOfTypeAll<Slider>();
+        foreach (var s in allSliders)
+        {
+            if (s.gameObject.name == "SliderBar" || s.gameObject.activeInHierarchy)
+            {
+                s.minValue = 1;
+                s.maxValue = _likertMax;
+                s.wholeNumbers = true;
+
+                TextMeshProUGUI[] textComponents = s.gameObject.GetComponentsInChildren<TextMeshProUGUI>(true);
+                foreach (var txt in textComponents)
+                {
+                    if (txt != null && (txt.gameObject.name.Equals("score", System.StringComparison.OrdinalIgnoreCase) ||
+                                        txt.gameObject.name.Contains("Score")))
+                    {
+                        txt.text = "score";
+                    }
+                }
+
+                Text[] oldTexts = s.gameObject.GetComponentsInChildren<Text>(true);
+                foreach (var txt in oldTexts)
+                {
+                    if (txt != null && (txt.gameObject.name.Equals("score", System.StringComparison.OrdinalIgnoreCase) ||
+                                        txt.gameObject.name.Contains("Score")))
+                    {
+                        txt.text = "score";
+                    }
+                }
+
+                var containerCanvas = s.GetComponentInParent<Canvas>();
+                if (containerCanvas != null)
+                    Canvas.ForceUpdateCanvases();
+            }
+        }
+
+        foreach (var obj in boManager.objectives)
+        {
+            if (obj == null || obj.value == null)
+                continue;
+
+            if (obj.key == "aesthetics" || obj.key == "usability")
+            {
+                obj.value.lowerBound = 1;
+                obj.value.upperBound = _likertMax;
+            }
+        }
+    }
+
+    private void EnableBoRuntimeComponentsForConfig()
+    {
+        if (boManager == null)
+            return;
+
+        if (boManager.gameObject != null && !boManager.gameObject.activeSelf)
+            boManager.gameObject.SetActive(true);
+
+        boManager.enabled = true;
+
+        Optimizer optimizer = boManager.GetComponent<Optimizer>();
+        if (optimizer != null)
+            optimizer.enabled = true;
+
+        SocketNetwork socketNetwork = boManager.GetComponent<SocketNetwork>();
+        if (socketNetwork != null)
+            socketNetwork.enabled = true;
+
+        MainThreadDispatcher dispatcher = boManager.GetComponent<MainThreadDispatcher>();
+        if (dispatcher != null)
+            dispatcher.enabled = true;
+
+        PythonStarter pythonStarter = boManager.GetComponent<PythonStarter>();
+        if (pythonStarter != null)
+            pythonStarter.enabled = false;
+    }
 
     /// <summary>
     /// Sets boManager.initialParametersDataPath and initialObjectivesDataPath
@@ -515,10 +742,51 @@ public class ExperimentConfig : MonoBehaviour
     {
         if (string.IsNullOrEmpty(_userId)) return;
 
-        boManager.initialParametersDataPath = $"{_userId}/baseline_{_likertMax}_params.csv";
-        boManager.initialObjectivesDataPath = $"{_userId}/baseline_{_likertMax}_objectives.csv";
+        string userFolder = LogDataFolderUtility.NormalizeLogFolderToken(_userId);
+        boManager.initialParametersDataPath = $"{userFolder}/baseline_{_likertMax}_params.csv";
+        boManager.initialObjectivesDataPath = $"{userFolder}/baseline_{_likertMax}_objectives.csv";
 
         Debug.Log($"[ExperimentConfig] Baseline paths updated: {boManager.initialParametersDataPath}, {boManager.initialObjectivesDataPath}");
+    }
+
+    private void ClearBaselineDataPaths()
+    {
+        boManager.initialParametersDataPath = string.Empty;
+        boManager.initialObjectivesDataPath = string.Empty;
+        Debug.Log("[ExperimentConfig] Baseline paths cleared for Random mode.");
+    }
+
+    private void SetConditionManagerMode(string modeName)
+    {
+        var conditionManager = ResolveFittsLawConditionManager();
+        if (conditionManager == null)
+            return;
+
+        try
+        {
+            var enumType = conditionManager.GetType().GetNestedType("ConditionMode");
+            var method = conditionManager.GetType().GetMethod("SetConditionMode");
+            if (enumType == null || method == null)
+                return;
+
+            var enumValue = System.Enum.Parse(enumType, modeName);
+            method.Invoke(conditionManager, new object[] { enumValue });
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogWarning($"[ExperimentConfig] 設定 ConditionMode={modeName} 失敗: {ex.Message}");
+        }
+    }
+
+    private void SyncConditionManagerFinalDesignRound()
+    {
+        var conditionManager = ResolveFittsLawConditionManager();
+        if (conditionManager == null)
+            return;
+
+        var includeFinalField = conditionManager.GetType().GetField("includeFinalDesignRound");
+        if (includeFinalField != null)
+            includeFinalField.SetValue(conditionManager, boManager.enableFinalDesignRound);
     }
 
     private MonoBehaviour ResolveFittsLawConditionManager()

@@ -17,6 +17,7 @@ namespace BOforUnity.Scripts
         public sealed class SelectionResult
         {
             public int Iteration;
+            public int NextIteration;
             public float[] ParameterRaw;
             public float UtopiaDistance;
             public float Maximin;
@@ -461,6 +462,7 @@ namespace BOforUnity.Scripts
             selection = new SelectionResult
             {
                 Iteration = best.Iteration,
+                NextIteration = rows.Max(r => r.Iteration) + 1,
                 ParameterRaw = best.ParameterRaw.ToArray(),
                 UtopiaDistance = best.UtopiaDistance,
                 Maximin = best.Maximin,
