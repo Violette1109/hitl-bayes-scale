@@ -2,6 +2,8 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
+using System.Text;
 using BOforUnity.Scripts;
 using QuestionnaireToolkit.Scripts;
 using UnityEngine;
@@ -38,6 +40,12 @@ namespace BOforUnity.Examples
         public bool includeFinalDesignRound = true;
         [Min(0f)] public float nextRoundDelaySeconds = 0.25f;
 
+        [Header("Baseline CSV Capture")]
+        public bool captureBaselineCsv = false;
+        public string baselineCsvUserId = "-1";
+        [Min(1)] public int baselineCsvScale = 5;
+        public string baselineCsvGroupId = "baseline";
+
         private readonly Dictionary<string, List<float>> _currentObjectiveValues =
             new Dictionary<string, List<float>>(StringComparer.OrdinalIgnoreCase);
 
@@ -47,6 +55,9 @@ namespace BOforUnity.Examples
         private bool _started;
         private bool _advanceQueued;
         private bool _runtimeUserFolderReserved;
+        private bool _baselineBlockActive;
+        private bool _baselineBlockCompletionNotified;
+        private int _lastBaselineCsvRoundWritten;
 
         public bool UsesExternalIterationSignal
         {
@@ -177,6 +188,9 @@ namespace BOforUnity.Examples
                 return;
             }
 
+            if (captureBaselineCsv)
+                AppendBaselineCsvRow();
+
             QueueNextRound();
         }
 
@@ -186,6 +200,16 @@ namespace BOforUnity.Examples
                 return;
 
             conditionMode = mode;
+            if (mode != ConditionMode.Random)
+            {
+                captureBaselineCsv = false;
+                _baselineBlockActive = false;
+            }
+            else if (!_baselineBlockActive)
+            {
+                readIterationsFromSource = true;
+                ResetRoundProgress();
+            }
             ResolveReferences();
             ApplyConditionConfiguration();
         }
@@ -197,9 +221,69 @@ namespace BOforUnity.Examples
             
             // 🟢 核心修正：允許在正式啟動時重新鎖定正確的 User ID 資料夾
             _runtimeUserFolderReserved = false;
+            if (!_started)
+            {
+                _currentRound = 0;
+                _baseRoundCount = 0;
+                _totalRoundCount = 0;
+                _baselineBlockCompletionNotified = false;
+                _lastBaselineCsvRoundWritten = 0;
+                _currentObjectiveValues.Clear();
+            }
 
             _advanceQueued = true;
             StartCoroutine(BeginNextRoundAfterDelay());
+        }
+
+        public void ConfigureBaselineBlock(string baselineUserId, int scale, int rounds)
+        {
+            ResolveReferences();
+
+            captureBaselineCsv = true;
+            _baselineBlockActive = true;
+            _baselineBlockCompletionNotified = false;
+            _lastBaselineCsvRoundWritten = 0;
+
+            baselineCsvUserId = ResolveContextValue(baselineUserId);
+            baselineCsvScale = Mathf.Max(1, scale);
+            conditionMode = ConditionMode.Random;
+            setConditionIdFromMode = false;
+            userId = baselineCsvUserId;
+            conditionId = baselineCsvScale.ToString(CultureInfo.InvariantCulture);
+            groupId = ResolveContextValue(baselineCsvGroupId);
+            readIterationsFromSource = false;
+            samplingIterations = Mathf.Max(1, rounds);
+            optimizationIterations = 0;
+            includeFinalDesignRound = false;
+
+            _currentRound = 0;
+            _baseRoundCount = 0;
+            _totalRoundCount = 0;
+            _started = false;
+            _advanceQueued = false;
+            _runtimeUserFolderReserved = false;
+            _currentObjectiveValues.Clear();
+
+            BoForUnityManager source = ResolveIterationSettingsSource();
+            if (source != null)
+            {
+                source.userId = userId;
+                source.conditionId = conditionId;
+                source.groupId = groupId;
+                source.numSamplingIterations = samplingIterations;
+                source.numOptimizationIterations = 0;
+                source.totalIterations = samplingIterations;
+                source.enableFinalDesignRound = false;
+                source.warmStart = false;
+                source.useInitialDataAsPrior = false;
+                source.questionnaireScaleForCsv = conditionId;
+                source.questionnaireSamplingRoundsForCsv = groupId;
+                source.questionnaireRandomForCsv = true;
+                source.questionnaireOptimisedForCsv = false;
+            }
+
+            ApplyConditionConfiguration();
+            PrepareBaselineCsvFiles();
         }
 
         public void RequestNextIteration()
@@ -398,6 +482,14 @@ namespace BOforUnity.Examples
                 if (fittsLawTask != null)
                 {
                     fittsLawTask.SetRuntimeDesignParameterSource(source);
+                    fittsLawTask.startOnAwake = true;
+                    fittsLawTask.ensureBoManagerInScene = true;
+                    fittsLawTask.waitForBoEvaluationStart = true;
+                    fittsLawTask.startBoOptimizationAfterResults = true;
+                    fittsLawTask.queueNextExternalSignalIteration = true;
+                    fittsLawTask.readDesignParametersFromBo = true;
+                    fittsLawTask.writeObjectivesToBo = true;
+                    fittsLawTask.randomizeDesignParametersOnBegin = false;
                     fittsLawTask.restartWithKey = false;
                 }
 
@@ -461,13 +553,7 @@ namespace BOforUnity.Examples
                     continue;
                 }
 
-                if (transform.IsChildOf(candidate.transform))
-                {
-                    DisableBoComponents(candidate);
-                    continue;
-                }
-
-                candidate.gameObject.SetActive(false);
+                DisableBoComponents(candidate);
             }
         }
 
@@ -520,6 +606,19 @@ namespace BOforUnity.Examples
             }
         }
 
+        private void ResetRoundProgress()
+        {
+            _currentRound = 0;
+            _baseRoundCount = 0;
+            _totalRoundCount = 0;
+            _started = false;
+            _advanceQueued = false;
+            _runtimeUserFolderReserved = false;
+            _baselineBlockCompletionNotified = false;
+            _lastBaselineCsvRoundWritten = 0;
+            _currentObjectiveValues.Clear();
+        }
+
         private void SyncContextToReferencedComponents()
         {
             conditionId = ResolveContextValue(GetConfiguredConditionId());
@@ -546,6 +645,13 @@ namespace BOforUnity.Examples
         {
             if (_runtimeUserFolderReserved)
                 return;
+
+            if (_baselineBlockActive)
+            {
+                userId = ResolveContextValue(userId);
+                _runtimeUserFolderReserved = true;
+                return;
+            }
 
             string requestedUserId = ResolveContextValue(userId);
             string normalizedRequestedUserId = LogDataFolderUtility.NormalizeLogFolderToken(requestedUserId);
@@ -597,6 +703,8 @@ namespace BOforUnity.Examples
                 Debug.Log(
                     $"FittsLawConditionManager: condition '{conditionId}' completed {_totalRoundCount} rounds."
                 );
+                if (_baselineBlockActive || captureBaselineCsv)
+                    NotifyBaselineBlockCompleted();
                 return;
             }
 
@@ -622,6 +730,379 @@ namespace BOforUnity.Examples
             fittsLawTask.SetRuntimeDesignParameterSource(source);
             fittsLawTask.SetManualLogContext(_currentRound, phase, userId, conditionId, groupId);
             fittsLawTask.BeginTask();
+        }
+
+        private void PrepareBaselineCsvFiles()
+        {
+            string[] parameterHeaders = CollectBaselineParameterKeys();
+            string[] objectiveHeaders = CollectBaselineObjectiveKeys();
+            if (parameterHeaders.Length == 0 || objectiveHeaders.Length == 0)
+            {
+                Debug.LogError("FittsLawConditionManager: baseline CSV headers could not be resolved.");
+                return;
+            }
+
+            Directory.CreateDirectory(GetBaselineCsvDirectory());
+            File.WriteAllText(
+                GetBaselineParametersCsvPath(),
+                BuildSemicolonCsvLine(parameterHeaders) + Environment.NewLine,
+                Encoding.UTF8);
+            File.WriteAllText(
+                GetBaselineObjectivesCsvPath(),
+                BuildSemicolonCsvLine(objectiveHeaders) + Environment.NewLine,
+                Encoding.UTF8);
+        }
+
+        private void AppendBaselineCsvRow()
+        {
+            if (!_baselineBlockActive || _currentRound <= 0 || _lastBaselineCsvRoundWritten == _currentRound)
+                return;
+
+            string[] parameterKeys = CollectBaselineParameterKeys();
+            string[] objectiveKeys = CollectBaselineObjectiveKeys();
+            if (parameterKeys.Length == 0 || objectiveKeys.Length == 0)
+            {
+                Debug.LogError("FittsLawConditionManager: baseline CSV row skipped because headers are missing.");
+                return;
+            }
+
+            string[] parameterValues = new string[parameterKeys.Length];
+            for (int i = 0; i < parameterKeys.Length; i++)
+            {
+                if (!TryGetParameterValue(parameterKeys[i], out float value))
+                {
+                    value = 0f;
+                    Debug.LogWarning($"FittsLawConditionManager: baseline parameter '{parameterKeys[i]}' was missing; writing 0.");
+                }
+
+                parameterValues[i] = FormatCsvFloat(value);
+            }
+
+            string[] objectiveValues = new string[objectiveKeys.Length];
+            for (int i = 0; i < objectiveKeys.Length; i++)
+            {
+                if (!TryGetObjectiveValue(objectiveKeys[i], out float value))
+                {
+                    value = GetObjectiveFallbackValue(objectiveKeys[i]);
+                    Debug.LogWarning(
+                        $"FittsLawConditionManager: baseline objective '{objectiveKeys[i]}' was missing; writing fallback {FormatCsvFloat(value)}."
+                    );
+                }
+
+                objectiveValues[i] = FormatCsvFloat(value);
+            }
+
+            Directory.CreateDirectory(GetBaselineCsvDirectory());
+            AppendSemicolonCsvRow(GetBaselineParametersCsvPath(), parameterValues);
+            AppendSemicolonCsvRow(GetBaselineObjectivesCsvPath(), objectiveValues);
+            _lastBaselineCsvRoundWritten = _currentRound;
+        }
+
+        private void NotifyBaselineBlockCompleted()
+        {
+            if (_baselineBlockCompletionNotified)
+                return;
+
+            _baselineBlockCompletionNotified = true;
+            captureBaselineCsv = false;
+            _baselineBlockActive = false;
+            _started = false;
+            _advanceQueued = false;
+
+            foreach (MonoBehaviour component in Resources.FindObjectsOfTypeAll<MonoBehaviour>())
+            {
+                if (component == null ||
+                    component.gameObject == null ||
+                    !component.gameObject.scene.IsValid() ||
+                    component.GetType().Name != "ExperimentConfig")
+                {
+                    continue;
+                }
+
+                try
+                {
+                    var method = component.GetType().GetMethod(
+                        "OnBaselineBlockCompleted",
+                        System.Reflection.BindingFlags.Public |
+                        System.Reflection.BindingFlags.NonPublic |
+                        System.Reflection.BindingFlags.Instance);
+                    if (method == null)
+                        continue;
+
+                    object[] args = method.GetParameters().Length == 1
+                        ? new object[] { baselineCsvScale }
+                        : null;
+                    method.Invoke(component, args);
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogWarning($"FittsLawConditionManager: baseline completion callback failed: {ex.Message}");
+                    return;
+                }
+            }
+
+            Debug.LogWarning("FittsLawConditionManager: baseline block completed, but ExperimentConfig callback was not found.");
+        }
+
+        private string GetBaselineCsvDirectory()
+        {
+            string folder = LogDataFolderUtility.NormalizeLogFolderToken(baselineCsvUserId);
+            return Path.Combine(Application.streamingAssetsPath, "BOData", "InitData", folder);
+        }
+
+        private string GetBaselineParametersCsvPath()
+        {
+            return Path.Combine(GetBaselineCsvDirectory(), $"baseline_{baselineCsvScale}_params.csv");
+        }
+
+        private string GetBaselineObjectivesCsvPath()
+        {
+            return Path.Combine(GetBaselineCsvDirectory(), $"baseline_{baselineCsvScale}_objectives.csv");
+        }
+
+        private string[] CollectBaselineParameterKeys()
+        {
+            List<string> keys = new List<string>();
+            BoForUnityManager source = ResolveIterationSettingsSource();
+            if (source != null && source.parameters != null)
+            {
+                for (int i = 0; i < source.parameters.Count; i++)
+                {
+                    ParameterEntry parameter = source.parameters[i];
+                    if (parameter != null)
+                        TryAddCsvKey(keys, parameter.key);
+                }
+            }
+
+            if (keys.Count == 0 && fittsLawTask != null)
+            {
+                TryAddCsvKey(keys, fittsLawTask.xFontSizeParameterKey);
+                TryAddCsvKey(keys, fittsLawTask.buttonSizeParameterKey);
+                TryAddCsvKey(keys, fittsLawTask.buttonDistanceParameterKey);
+                TryAddCsvKey(keys, fittsLawTask.buttonHueParameterKey);
+                TryAddCsvKey(keys, fittsLawTask.buttonSaturationParameterKey);
+            }
+
+            return keys.ToArray();
+        }
+
+        private string[] CollectBaselineObjectiveKeys()
+        {
+            List<string> keys = new List<string>();
+            BoForUnityManager source = ResolveIterationSettingsSource();
+            if (source != null && source.objectives != null)
+            {
+                for (int i = 0; i < source.objectives.Count; i++)
+                {
+                    ObjectiveEntry objective = source.objectives[i];
+                    if (objective != null)
+                        TryAddCsvKey(keys, objective.key);
+                }
+            }
+
+            if (keys.Count == 0 && fittsLawTask != null)
+            {
+                TryAddCsvKey(keys, fittsLawTask.aestheticsObjectiveKey);
+                TryAddCsvKey(keys, fittsLawTask.speedObjectiveKey);
+                TryAddCsvKey(keys, fittsLawTask.accuracyObjectiveKey);
+                TryAddCsvKey(keys, fittsLawTask.usabilityObjectiveKey);
+            }
+
+            return keys.ToArray();
+        }
+
+        private static void TryAddCsvKey(List<string> keys, string key)
+        {
+            if (keys == null || string.IsNullOrWhiteSpace(key))
+                return;
+
+            string trimmed = key.Trim();
+            if (!keys.Contains(trimmed))
+                keys.Add(trimmed);
+        }
+
+        private bool TryGetParameterValue(string key, out float value)
+        {
+            value = 0f;
+            BoForUnityManager source = ResolveIterationSettingsSource();
+            if (source != null && source.parameters != null)
+            {
+                for (int i = 0; i < source.parameters.Count; i++)
+                {
+                    ParameterEntry parameter = source.parameters[i];
+                    if (parameter == null ||
+                        parameter.value == null ||
+                        !string.Equals(parameter.key, key, StringComparison.Ordinal))
+                    {
+                        continue;
+                    }
+
+                    value = parameter.value.Value;
+                    if (IsFinite(value))
+                        return true;
+                }
+            }
+
+            return TryGetTaskParameterValue(key, out value);
+        }
+
+        private bool TryGetTaskParameterValue(string key, out float value)
+        {
+            value = 0f;
+            if (fittsLawTask == null || string.IsNullOrWhiteSpace(key))
+                return false;
+
+            if (string.Equals(key, fittsLawTask.xFontSizeParameterKey, StringComparison.Ordinal))
+                value = fittsLawTask.xFontSizePixels;
+            else if (string.Equals(key, fittsLawTask.buttonSizeParameterKey, StringComparison.Ordinal))
+                value = fittsLawTask.circleSizePixels;
+            else if (string.Equals(key, fittsLawTask.buttonDistanceParameterKey, StringComparison.Ordinal))
+                value = fittsLawTask.circleDistancePixels;
+            else if (string.Equals(key, fittsLawTask.buttonHueParameterKey, StringComparison.Ordinal))
+                value = fittsLawTask.buttonHue;
+            else if (string.Equals(key, fittsLawTask.buttonSaturationParameterKey, StringComparison.Ordinal))
+                value = fittsLawTask.buttonSaturation;
+            else
+                return false;
+
+            return IsFinite(value);
+        }
+
+        private bool TryGetObjectiveValue(string key, out float value)
+        {
+            value = 0f;
+            if (fittsLawTask != null)
+            {
+                if (string.Equals(key, fittsLawTask.speedObjectiveKey, StringComparison.Ordinal))
+                {
+                    value = fittsLawTask.taskCompletionTimeMs;
+                    return IsFinite(value);
+                }
+
+                if (string.Equals(key, fittsLawTask.accuracyObjectiveKey, StringComparison.Ordinal))
+                {
+                    value = fittsLawTask.accuracyDistancePixels;
+                    return IsFinite(value);
+                }
+            }
+
+            if (TryGetObjectiveAverage(key, out value))
+                return true;
+
+            return TryGetSourceObjectiveValue(key, out value);
+        }
+
+        private bool TryGetSourceObjectiveValue(string key, out float value)
+        {
+            value = 0f;
+            if (!TryFindObjectiveEntry(key, out ObjectiveEntry objective) ||
+                objective.value == null ||
+                objective.value.values == null ||
+                objective.value.values.Count == 0)
+            {
+                return false;
+            }
+
+            int measureCount = Mathf.Max(1, objective.value.numberOfSubMeasures);
+            int startIndex = Mathf.Max(0, objective.value.values.Count - measureCount);
+            double sum = 0.0;
+            int count = 0;
+            for (int i = startIndex; i < objective.value.values.Count; i++)
+            {
+                float candidate = objective.value.values[i];
+                if (!IsFinite(candidate))
+                    return false;
+
+                sum += candidate;
+                count++;
+            }
+
+            if (count == 0)
+                return false;
+
+            value = (float)(sum / count);
+            return true;
+        }
+
+        private float GetObjectiveFallbackValue(string key)
+        {
+            if (TryFindObjectiveEntry(key, out ObjectiveEntry objective) &&
+                objective.value != null &&
+                IsFinite(objective.value.lowerBound) &&
+                IsFinite(objective.value.upperBound))
+            {
+                return (objective.value.lowerBound + objective.value.upperBound) * 0.5f;
+            }
+
+            return 0f;
+        }
+
+        private bool TryFindObjectiveEntry(string key, out ObjectiveEntry objective)
+        {
+            objective = null;
+            BoForUnityManager source = ResolveIterationSettingsSource();
+            if (source == null || source.objectives == null || string.IsNullOrWhiteSpace(key))
+                return false;
+
+            for (int i = 0; i < source.objectives.Count; i++)
+            {
+                ObjectiveEntry candidate = source.objectives[i];
+                if (candidate == null || !string.Equals(candidate.key, key, StringComparison.Ordinal))
+                    continue;
+
+                objective = candidate;
+                return true;
+            }
+
+            return false;
+        }
+
+        private static void AppendSemicolonCsvRow(string path, string[] values)
+        {
+            using (var writer = new StreamWriter(path, true, Encoding.UTF8))
+            {
+                writer.WriteLine(BuildSemicolonCsvLine(values));
+            }
+        }
+
+        private static string BuildSemicolonCsvLine(string[] cells)
+        {
+            StringBuilder builder = new StringBuilder();
+            for (int i = 0; i < cells.Length; i++)
+            {
+                if (i > 0)
+                    builder.Append(';');
+                builder.Append(EscapeSemicolonCsvCell(cells[i]));
+            }
+
+            return builder.ToString();
+        }
+
+        private static string EscapeSemicolonCsvCell(string value)
+        {
+            if (string.IsNullOrEmpty(value))
+                return string.Empty;
+
+            bool mustQuote =
+                value.IndexOf(';') >= 0 ||
+                value.IndexOf('"') >= 0 ||
+                value.IndexOf('\n') >= 0 ||
+                value.IndexOf('\r') >= 0;
+
+            if (!mustQuote)
+                return value;
+
+            return "\"" + value.Replace("\"", "\"\"") + "\"";
+        }
+
+        private static string FormatCsvFloat(float value)
+        {
+            if (!IsFinite(value))
+                return "0";
+
+            return Math.Round(value, 3, MidpointRounding.AwayFromZero)
+                .ToString("0.###", CultureInfo.InvariantCulture);
         }
 
         private string GetPhaseForRound(int round)

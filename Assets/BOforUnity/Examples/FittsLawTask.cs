@@ -214,6 +214,7 @@ namespace BOforUnity.Examples
         private string _manualLogGroupId = "-1";
         private string _manualLogDirectory;
         private BoForUnityManager _runtimeDesignParameterSource;
+        private int _autoStartGeneration;
 
         private void Awake()
         {
@@ -223,6 +224,8 @@ namespace BOforUnity.Examples
 
         private IEnumerator Start()
         {
+            int autoStartGeneration = _autoStartGeneration;
+
             if (!startOnAwake)
                 yield break;
 
@@ -233,6 +236,9 @@ namespace BOforUnity.Examples
                 yield return new WaitForSecondsRealtime(startDelaySeconds);
 
             yield return null;
+            if (autoStartGeneration != _autoStartGeneration || !startOnAwake)
+                yield break;
+
             BeginTask();
         }
 
@@ -291,6 +297,7 @@ namespace BOforUnity.Examples
 
         public void BeginTask()
         {
+            _autoStartGeneration++;
             ClearGeneratedUi();
             if (randomizeDesignParametersOnBegin)
                 ApplyRandomDesignParameters();

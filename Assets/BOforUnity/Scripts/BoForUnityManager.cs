@@ -83,6 +83,7 @@ namespace BOforUnity
         [SerializeField] private bool enableSamplingEdit = false; // checkbox in inspector
         
         public bool warmStart = false;
+        public bool useInitialDataAsPrior = false;
         public bool perfectRatingActive = false;
         public bool perfectRatingInInitialRounds = false;
         public string initialParametersDataPath;
@@ -950,7 +951,7 @@ namespace BOforUnity
                 parameterEntry.value.Value = Mathf.Clamp(selectedValue, lo, hi);
             }
 
-            currentIteration = totalIterations + 1;
+            currentIteration = Mathf.Max(totalIterations + 1, selected.NextIteration);
             _finalDesignRoundPrepared = true;
             _finalDesignRoundInProgress = false;
             _finalDesignRoundLogged = false;

@@ -42,6 +42,7 @@ OBSERVATIONS_LOG_PATH = ""
 
 # warm start placeholders
 WARM_START = False
+USE_INITIAL_DATA_AS_PRIOR = False
 RANDOM_ALLOCATION = False
 OPTIMIZED_INTRODUCTION = True
 CSV_PATH_PARAMETERS = ""
@@ -392,7 +393,7 @@ def objective_function(conn, x_tensor):
     return torch.tensor([f], dtype=torch.double)
 
 # -------------------- data IO --------------------
-def generate_initial_data(conn, n_samples):
+def generate_initial_data(conn, n_samples, start_iteration=0):
     global PROJECT_PATH
     if n_samples < 1:
         raise ValueError("n_samples must be >= 1 for non-warm-start runs.")
@@ -410,7 +411,8 @@ def generate_initial_data(conn, n_samples):
     train_obj = []
     best_so_far = -1e9
     for i, x in enumerate(train_x):
-        print(f"---- Initial Sample {i+1}", flush=True)
+        absolute_iteration = int(start_iteration) + i + 1
+        print(f"---- Initial Sample {absolute_iteration}", flush=True)
         y = objective_function(conn, x)  # shape [1]
         train_obj.append(y)
 
@@ -427,7 +429,7 @@ def generate_initial_data(conn, n_samples):
 
         row = [USER_ID, CONDITION_ID, GROUP_ID, bool_to_csv(RANDOM_ALLOCATION), bool_to_csv(OPTIMIZED_INTRODUCTION),
                time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
-               i+1, 'sampling', 'TRUE' if is_best else 'FALSE', y_den, *x_den]
+               absolute_iteration, 'sampling', 'TRUE' if is_best else 'FALSE', y_den, *x_den]
         with open(obs_csv, 'a', newline='') as f:
             csv.writer(f, delimiter=';').writerow(row)
 
@@ -436,17 +438,12 @@ def generate_initial_data(conn, n_samples):
     # Ensure sampling-only runs (N_ITERATIONS=0) have globally-correct IsBest flags.
     if train_obj:
         vals_norm = [float(t.item()) for t in train_obj]
-        best_norm = max(vals_norm)
-        flags = ['TRUE' if abs(v - best_norm) < 1e-12 else 'FALSE' for v in vals_norm]
-        df = pd.read_csv(obs_csv, delimiter=';')
-        if len(df) >= len(flags):
-            df.loc[df.index[:len(flags)], 'IsBest'] = flags
-            df.to_csv(obs_csv, sep=';', index=False)
+        update_best_flags(obs_csv, vals_norm)
 
     Y = torch.tensor(np.stack([t.numpy() for t in train_obj], axis=0), dtype=torch.double)  # shape [n,1]
     return train_x, Y
 
-def load_data():
+def load_data_with_raw():
     if not CSV_PATH_PARAMETERS or not CSV_PATH_OBJECTIVES:
         raise ValueError("Warm start is enabled, but initial CSV paths are missing.")
 
@@ -494,7 +491,67 @@ def load_data():
     if not np.all(np.isfinite(y_norm)):
         raise ValueError("Warm-start normalized objectives contain non-finite values.")
 
-    return torch.tensor(x_norm, dtype=torch.double), torch.tensor(y_norm, dtype=torch.double)
+    return (
+        torch.tensor(x_norm, dtype=torch.double),
+        torch.tensor(y_norm, dtype=torch.double),
+        x_raw,
+        y_raw,
+    )
+
+def load_data():
+    train_x, train_y, _, _ = load_data_with_raw()
+    return train_x, train_y
+
+def append_prior_observation_rows(x_raw, y_raw, y_norm):
+    obs_csv = os.path.join(PROJECT_PATH, "ObservationsPerEvaluation.csv")
+    if not os.path.exists(obs_csv):
+        with open(obs_csv, 'w', newline='') as f:
+            csv.writer(f, delimiter=';').writerow(expected_observation_columns())
+
+    timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+    with open(obs_csv, 'a', newline='') as f:
+        writer = csv.writer(f, delimiter=';')
+        for i in range(x_raw.shape[0]):
+            writer.writerow([
+                USER_ID,
+                CONDITION_ID,
+                GROUP_ID,
+                bool_to_csv(RANDOM_ALLOCATION),
+                bool_to_csv(OPTIMIZED_INTRODUCTION),
+                timestamp,
+                i + 1,
+                'baseline',
+                'FALSE',
+                y_raw[i, 0],
+                *x_raw[i].tolist(),
+            ])
+
+    update_best_flags(obs_csv, y_norm.squeeze(-1).detach().cpu().tolist())
+
+def update_best_flags(obs_csv, y_values_norm):
+    if not os.path.exists(obs_csv):
+        return
+
+    if isinstance(y_values_norm, (float, int)):
+        values = [float(y_values_norm)]
+    else:
+        values = [float(v) for v in y_values_norm]
+    if not values:
+        return
+
+    best_norm = max(values)
+    flags = ['TRUE' if abs(v - best_norm) < 1e-12 else 'FALSE' for v in values]
+    df = pd.read_csv(obs_csv, delimiter=';')
+    if len(df) == 0:
+        return
+
+    df['IsBest'] = df['IsBest'].astype(str)
+    if len(flags) >= len(df):
+        df['IsBest'] = flags[-len(df):]
+    else:
+        tail = df.index[-len(flags):]
+        df.loc[tail, 'IsBest'] = flags
+    df.to_csv(obs_csv, sep=';', index=False)
 
 # -------------------- model --------------------
 def initialize_model(train_x, train_obj):
@@ -540,7 +597,9 @@ def save_xy(x_sample, y_sample, iteration):
     if os.path.exists(obs_csv):
         df = pd.read_csv(obs_csv, delimiter=';')
         expected_cols = expected_observation_columns()
-        if list(df.columns) != expected_cols:
+        missing_cols = [c for c in expected_cols if c not in df.columns]
+        unexpected_cols = [c for c in df.columns if c not in expected_cols and c != "WarmStart"]
+        if missing_cols or unexpected_cols:
             raise ValueError(
                 f"ObservationsPerEvaluation.csv columns mismatch. "
                 f"Expected {expected_cols}, got {list(df.columns)}"
@@ -549,10 +608,24 @@ def save_xy(x_sample, y_sample, iteration):
         cols = expected_observation_columns()
         df = pd.DataFrame(columns=cols)
 
-    new_row = pd.DataFrame([[USER_ID, CONDITION_ID, GROUP_ID, bool_to_csv(RANDOM_ALLOCATION), bool_to_csv(OPTIMIZED_INTRODUCTION),
-                             time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
-                             iteration_index, 'optimization', 'FALSE',
-                             y_np[-1][0], *x_np[-1]]], columns=df.columns)
+    row = {col: "" for col in df.columns}
+    row.update({
+        "UserID": USER_ID,
+        "Scale": CONDITION_ID,
+        "SamplingRounds": GROUP_ID,
+        "WarmStart": bool_to_csv(WARM_START),
+        "Random": bool_to_csv(RANDOM_ALLOCATION),
+        "OptimizedIntroduction": bool_to_csv(OPTIMIZED_INTRODUCTION),
+        "Timestamp": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
+        "Iteration": iteration_index,
+        "Phase": "optimization",
+        "IsBest": "FALSE",
+        objective_names[0]: y_np[-1][0],
+    })
+    for j, name in enumerate(parameter_names):
+        row[name] = x_np[-1][j]
+
+    new_row = pd.DataFrame([[row[c] for c in df.columns]], columns=df.columns)
     if df.empty:
         df = new_row.copy()
     else:
@@ -611,8 +684,18 @@ def bo_execute(conn, seed, iterations, initial_samples):
 
     metric_values = []  # best normalized objective per evaluation
 
-    if WARM_START:
-        train_x, train_y = load_data()
+    if WARM_START or USE_INITIAL_DATA_AS_PRIOR:
+        train_x, train_y, x_raw, y_raw = load_data_with_raw()
+        append_prior_observation_rows(x_raw, y_raw, train_y)
+        if initial_samples > 0:
+            sampled_x, sampled_y = generate_initial_data(
+                conn,
+                n_samples=initial_samples,
+                start_iteration=train_y.shape[0],
+            )
+            train_x = torch.cat([train_x, sampled_x])
+            train_y = torch.cat([train_y, sampled_y])
+            update_best_flags(OBSERVATIONS_LOG_PATH, train_y.squeeze(-1).detach().cpu().tolist())
     else:
         train_x, train_y = generate_initial_data(conn, n_samples=initial_samples)
 
@@ -650,7 +733,7 @@ def bo_execute(conn, seed, iterations, initial_samples):
 def main():
     global N_INITIAL, N_ITERATIONS, BATCH_SIZE, NUM_RESTARTS, RAW_SAMPLES, MC_SAMPLES, SEED
     global PROBLEM_DIM, NUM_OBJS, problem_bounds
-    global WARM_START, RANDOM_ALLOCATION, OPTIMIZED_INTRODUCTION
+    global WARM_START, USE_INITIAL_DATA_AS_PRIOR, RANDOM_ALLOCATION, OPTIMIZED_INTRODUCTION
     global CSV_PATH_PARAMETERS, CSV_PATH_OBJECTIVES, WARM_START_OBJECTIVE_FORMAT
     global USER_ID, CONDITION_ID, GROUP_ID, USER_LOG_ID, CONDITION_LOG_ID
     global parameter_names, objective_names, parameters_info, objectives_info
@@ -703,6 +786,7 @@ def main():
         PROBLEM_DIM    = get_cfg_int(cfg, "nParameters", required=True)
         NUM_OBJS       = get_cfg_int(cfg, "nObjectives", required=True)
         WARM_START     = get_cfg_bool(cfg, "warmStart", default=False)
+        USE_INITIAL_DATA_AS_PRIOR = get_cfg_bool(cfg, "useInitialDataAsPrior", default=False)
         RANDOM_ALLOCATION = get_cfg_bool(cfg, "random", default=False)
         OPTIMIZED_INTRODUCTION = get_cfg_bool(cfg, "optimizedIntroduction", default=True)
         CSV_PATH_PARAMETERS = str(cfg.get("initialParametersDataPath") or "")

@@ -32,6 +32,7 @@ namespace BOforUnity.Scripts
         public int batchSize, numRestarts, rawSamples, numOptimizationIterations, mcSamples, numSamplingIterations, seed;
         public int nParameters, nObjectives;
         public bool warmStart;
+        public bool useInitialDataAsPrior;
         public bool random;
         public bool optimizedIntroduction;
         public string initialParametersDataPath, initialObjectivesDataPath, warmStartObjectiveFormat;
@@ -644,6 +645,7 @@ namespace BOforUnity.Scripts
                     nParameters = parameterPayload.Count,
                     nObjectives = objectivePayload.Count,
                     warmStart = _bomanager.warmStart,
+                    useInitialDataAsPrior = _bomanager.useInitialDataAsPrior,
                     random = _bomanager.questionnaireRandomForCsv,
                     optimizedIntroduction = _bomanager.questionnaireOptimisedForCsv,
                     initialParametersDataPath = _bomanager.initialParametersDataPath,
